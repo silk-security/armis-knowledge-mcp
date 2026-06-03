@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "armis-knowledge-dev": {
+      "type": "http",
+      "url": "${ARMIS_KNOWLEDGE_MCP_URL_DEV:-https://knowledge-mcp.moose-dev.armis.com/mcp}",
+      "headers": {
+        "Authorization": "Bearer ${ARMIS_KNOWLEDGE_TOKEN_DEV}"
+      }
+    }
+  }
+}

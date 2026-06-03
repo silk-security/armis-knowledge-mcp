@@ -1,0 +1,27 @@
+{
+  "name": "armis-knowledge-mcp",
+  "owner": {
+    "name": "Armis Security"
+  },
+  "metadata": {
+    "description": "Query the Armis Knowledge base — organizational standards, CWE remediation, framework and technology guidance — directly from your coding agent. Ships dev and stage variants so they can be installed side-by-side.",
+    "version": "0.2.0",
+    "pluginRoot": ".."
+  },
+  "plugins": [
+    {
+      "name": "armis-knowledge-dev",
+      "description": "DEV environment (knowledge-mcp.moose-dev.armis.com). Adds /knowledge-dev, /cwe-fix-dev, /framework-guidance-dev, and /tech-guidance-dev commands. Reads ARMIS_KNOWLEDGE_TOKEN_DEV. Tenant isolation enforced server-side; no knowledge data stored on disk.",
+      "source": "./dev/",
+      "license": "Apache-2.0",
+      "category": "development"
+    },
+    {
+      "name": "armis-knowledge-stage",
+      "description": "STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge-stage, /cwe-fix-stage, /framework-guidance-stage, and /tech-guidance-stage commands. Reads ARMIS_KNOWLEDGE_TOKEN_STAGE. Tenant isolation enforced server-side; no knowledge data stored on disk.",
+      "source": "./stage/",
+      "license": "Apache-2.0",
+      "category": "development"
+    }
+  ]
+}

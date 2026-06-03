@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "armis-knowledge-stage": {
+      "type": "http",
+      "url": "${ARMIS_KNOWLEDGE_MCP_URL_STAGE:-https://knowledge-mcp.moose-stg.armis.com/mcp}",
+      "headers": {
+        "Authorization": "Bearer ${ARMIS_KNOWLEDGE_TOKEN_STAGE}"
+      }
+    }
+  }
+}
