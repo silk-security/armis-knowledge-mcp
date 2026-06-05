@@ -50,18 +50,25 @@ plugin/
 ## Install (end-user)
 
 The webapp's `/settings/integrations` page renders the up-to-date instructions.
-TL;DR:
+TL;DR — pick either marketplace URL:
 
 ```
+# canonical
+/plugin marketplace add ArmisSecurity/armis-knowledge-mcp
+
+# legacy mirror
 /plugin marketplace add silk-security/armis-knowledge-mcp
+```
+
+Then install the plugins:
+
+```
 /plugin install armis-knowledge-dev@armis-knowledge-mcp
 /plugin install armis-knowledge-stage@armis-knowledge-mcp   # optional
 ```
 
-> The marketplace repo currently lives at
-> [silk-security/armis-knowledge-mcp](https://github.com/silk-security/armis-knowledge-mcp)
-> as a temporary stand-in until `ArmisSecurity/armis-knowledge-mcp` is
-> provisioned. The install URL will change when that happens.
+Both URLs serve the same content — every push to `main` of this repo
+publishes to both. New installs should use the `ArmisSecurity` URL.
 
 …then export the token(s) you need (one-hour JWTs, exchanged from
 `client_id` / `client_secret` per the integrations page):
@@ -73,15 +80,16 @@ export ARMIS_KNOWLEDGE_TOKEN_STAGE=...
 
 ## Publishing
 
-`apps/mcp/plugin/` is mirrored to a public marketplace repo by
+`apps/mcp/plugin/` is mirrored to **two** public marketplace repos by
 [`.github/workflows/publish-plugin.yml`](../../../.github/workflows/publish-plugin.yml)
-on every push to `main` that touches the bundle. The workflow needs a
-`PLUGIN_PUSH_TOKEN` repo secret with `contents: write` on the target.
+on every push to `main` that touches the bundle. The matrix fans out so
+one target failing (token expired, org policy block) doesn't block the
+other. Each leg needs its own repo secret with `contents: write`:
 
-| Stage | Target repo | Notes |
+| Target | Secret | Notes |
 |---|---|---|
-| Today | [silk-security/armis-knowledge-mcp](https://github.com/silk-security/armis-knowledge-mcp) | Temporary stand-in. |
-| Eventually | `ArmisSecurity/armis-knowledge-mcp` (sibling of [armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp)) | Flip `repo_url` in the workflow + the install snippets above when the repo exists. |
+| [`ArmisSecurity/armis-knowledge-mcp`](https://github.com/ArmisSecurity/armis-knowledge-mcp) | `PLUGIN_PUSH_TOKEN_ARMIS` | Canonical home. ArmisSecurity org blocks classic PATs — use a fine-grained PAT or GitHub App. |
+| [`silk-security/armis-knowledge-mcp`](https://github.com/silk-security/armis-knowledge-mcp) | `PLUGIN_PUSH_TOKEN_SILK` | Legacy mirror; kept so existing installs keep updating. |
 
 ## Local install (without publishing)
 

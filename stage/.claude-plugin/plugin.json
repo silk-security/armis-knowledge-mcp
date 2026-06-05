@@ -1,0 +1,11 @@
+{
+  "name": "armis-knowledge-stage",
+  "description": "STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge-stage, /cwe-fix-stage, /framework-guidance-stage, and /tech-guidance-stage commands. Reads ARMIS_KNOWLEDGE_TOKEN_STAGE. Tenant isolation enforced server-side; no knowledge data stored on disk.",
+  "author": {
+    "name": "Armis Security"
+  },
+  "license": "Apache-2.0",
+  "category": "development",
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/"
+}
