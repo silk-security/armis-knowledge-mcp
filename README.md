@@ -4,15 +4,24 @@ Claude Code marketplace that ships **two plugins** — one for each environment 
 the Armis Knowledge MCP server — so a single agent session can talk to dev and
 stage independently:
 
-| Plugin | Backend | Slash commands | Token env |
-|---|---|---|---|
-| `armis-knowledge-dev` | `knowledge-mcp.moose-dev.armis.com` | `/knowledge-dev`, `/cwe-fix-dev`, `/framework-guidance-dev`, `/tech-guidance-dev` | `ARMIS_KNOWLEDGE_TOKEN_DEV` |
-| `armis-knowledge-stage` | `knowledge-mcp.moose-stg.armis.com` | `/knowledge-stage`, `/cwe-fix-stage`, `/framework-guidance-stage`, `/tech-guidance-stage` | `ARMIS_KNOWLEDGE_TOKEN_STAGE` |
+| Plugin | Backend | Slash commands |
+|---|---|---|
+| `armis-knowledge-dev` | `knowledge-mcp.moose-dev.armis.com` | `/knowledge-dev`, `/cwe-fix-dev`, `/framework-guidance-dev`, `/tech-guidance-dev` |
+| `armis-knowledge-stage` | `knowledge-mcp.moose-stg.armis.com` | `/knowledge-stage`, `/cwe-fix-stage`, `/framework-guidance-stage`, `/tech-guidance-stage` |
 
 The plugins use distinct MCP server names (`armis-knowledge-dev` vs
 `armis-knowledge-stage`), so installing both produces two separate tool
 namespaces (`mcp__armis_knowledge_dev__*` and `mcp__armis_knowledge_stage__*`)
 that can be called in the same conversation.
+
+Each plugin ships a small **local stdio bridge** (`bridge.py` + `auth.py` +
+`run.sh`) that runs as the MCP server in the user's Claude Code process. The
+bridge exchanges `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_TENANT_SLUG`
+for a short-lived JWT on startup and forwards every JSON-RPC message to the
+remote streamable-HTTP MCP endpoint with a fresh bearer token attached. Same
+auth lifecycle as [armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp).
+On first launch `run.sh` bootstraps a Python venv inside the plugin directory
+(~10 MB; one-time, ~5 s) and reuses it on subsequent launches.
 
 This bundle contains **no knowledge data**. The data lives server-side
 (per-tenant, in S3) and is queried over HTTPS with the user's bearer token.
@@ -32,6 +41,10 @@ plugin/
 ├── .claude-plugin/marketplace.json   manifest listing both plugins
 ├── dev/
 │   ├── .mcp.json                     server: armis-knowledge-dev → moose-dev
+│   ├── auth.py                       JWT exchange + cache + refresh
+│   ├── bridge.py                     stdio↔streamable-HTTP MCP proxy
+│   ├── run.sh                        venv bootstrap + entrypoint
+│   ├── requirements.txt              mcp, httpx, anyio
 │   └── skills/                       /knowledge-dev, /cwe-fix-dev, …
 │       ├── knowledge/SKILL.md
 │       ├── cwe-remediation/SKILL.md
@@ -39,6 +52,10 @@ plugin/
 │       └── tech-guidance/SKILL.md
 ├── stage/
 │   ├── .mcp.json                     server: armis-knowledge-stage → moose-stg
+│   ├── auth.py                       (mirror of dev/auth.py)
+│   ├── bridge.py                     (mirror of dev/bridge.py with stage URLs)
+│   ├── run.sh
+│   ├── requirements.txt
 │   └── skills/                       /knowledge-stage, /cwe-fix-stage, …
 │       ├── knowledge/SKILL.md
 │       ├── cwe-remediation/SKILL.md
@@ -70,12 +87,14 @@ Then install the plugins:
 Both URLs serve the same content — every push to `main` of this repo
 publishes to both. New installs should use the `ArmisSecurity` URL.
 
-…then export the token(s) you need (one-hour JWTs, exchanged from
-`client_id` / `client_secret` per the integrations page):
+…then export your credentials in the shell that launches Claude Code (the
+plugin's bridge reads them and exchanges them for a JWT on its own — there
+is no `ARMIS_KNOWLEDGE_TOKEN_*` to manage):
 
 ```bash
-export ARMIS_KNOWLEDGE_TOKEN_DEV=...
-export ARMIS_KNOWLEDGE_TOKEN_STAGE=...
+export ARMIS_CLIENT_ID='<your-id>'
+export ARMIS_CLIENT_SECRET='<your-secret>'
+export ARMIS_TENANT_SLUG='<your-tenant>'
 ```
 
 ## Publishing

@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "armis-knowledge-stage": {
-      "type": "http",
-      "url": "${ARMIS_KNOWLEDGE_MCP_URL_STAGE:-https://knowledge-mcp.moose-stg.armis.com/mcp}",
-      "headers": {
-        "Authorization": "Bearer ${ARMIS_KNOWLEDGE_TOKEN_STAGE}"
+      "command": "${CLAUDE_PLUGIN_ROOT}/run.sh",
+      "env": {
+        "ARMIS_KNOWLEDGE_API_URL": "${ARMIS_KNOWLEDGE_API_URL_STAGE:-https://knowledge-api.moose-stg.armis.com}",
+        "ARMIS_KNOWLEDGE_MCP_URL": "${ARMIS_KNOWLEDGE_MCP_URL_STAGE:-https://knowledge-mcp.moose-stg.armis.com/mcp/}"
       }
     }
   }

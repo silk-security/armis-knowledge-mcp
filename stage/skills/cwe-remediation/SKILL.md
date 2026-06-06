@@ -22,4 +22,4 @@ Get tenant-specific remediation and false-positive guidance for a CWE from the *
 ## Notes
 
 - CWE id format is `CWE-<number>` (e.g. `CWE-89`, `CWE-79`). The tool will normalize but prefer the canonical form.
-- Auth errors → refresh `ARMIS_KNOWLEDGE_TOKEN_STAGE` from `/settings/integrations` on `knowledge.moose-stg.armis.com`.
+- Auth errors → check `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_TENANT_SLUG` are set; rotate at `knowledge.moose-stg.armis.com/settings/integrations` if needed.
