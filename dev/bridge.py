@@ -103,6 +103,24 @@ async def _pump(
         pass
 
 
+def _find_leaf(exc: BaseException, *types: type[BaseException]) -> BaseException | None:
+    """Walk an ExceptionGroup tree for the first leaf of any of `types`.
+
+    streamablehttp_client raises errors wrapped in nested anyio task-group
+    ExceptionGroups; surfacing the original cause makes the difference
+    between "MCP server connection timed out after 30000ms" and a one-line
+    "421 Invalid Host header" in the user's terminal.
+    """
+    if isinstance(exc, types):
+        return exc
+    if isinstance(exc, BaseExceptionGroup):
+        for sub in exc.exceptions:
+            found = _find_leaf(sub, *types)
+            if found is not None:
+                return found
+    return None
+
+
 async def _run_bridge() -> None:
     api_url, mcp_url, client_id, tenant_slug = _resolve_config()
 
@@ -139,6 +157,37 @@ def main() -> None:
         # nonzero so Claude Code surfaces the failure cleanly.
         logger.error("%s", e)
         sys.exit(1)
+    except BaseExceptionGroup as eg:
+        # streamablehttp_client wraps upstream HTTP failures in nested
+        # ExceptionGroups. Without unwrapping, Claude Code only sees a 30s
+        # connect timeout — the actual cause (e.g. "421 Invalid Host
+        # header" from MCP's TransportSecurityMiddleware) gets lost.
+        status_err = _find_leaf(eg, httpx.HTTPStatusError)
+        if isinstance(status_err, httpx.HTTPStatusError):
+            # The streamable-HTTP client raises with the response body still
+            # un-consumed, so .text/.content would raise ResponseNotRead.
+            # Read it lazily and best-effort — the status line is the
+            # actionable signal even if the body never decodes.
+            body = ""
+            try:
+                body = (status_err.response.read().decode("utf-8", "replace")).strip()[:200]
+            except Exception:  # noqa: BLE001
+                pass
+            logger.error(
+                "upstream MCP returned HTTP %d %s for %s: %s",
+                status_err.response.status_code,
+                status_err.response.reason_phrase,
+                status_err.request.url,
+                body or "<empty body>",
+            )
+            sys.exit(1)
+        transport_err = _find_leaf(
+            eg, httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout
+        )
+        if transport_err is not None:
+            logger.error("upstream MCP connect failed: %s", transport_err)
+            sys.exit(1)
+        raise
 
 
 if __name__ == "__main__":
