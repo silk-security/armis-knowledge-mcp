@@ -9,7 +9,7 @@ to keep a long-lived `ARMIS_KNOWLEDGE_TOKEN_*` env var refreshed by hand
 
 This bridge runs locally as a stdio MCP server, exchanges
 `ARMIS_CLIENT_ID` + `ARMIS_CLIENT_SECRET` + a tenant identifier
-(`ARMIS_TENANT_ID` preferred, `ARMIS_TENANT_SLUG` legacy) for a JWT on
+(`ARMIS_TENANT_ID` preferred, `ARMIS_KNOWLEDGE_TENANT_SLUG` legacy) for a JWT on
 first use (and refreshes <5 min from expiry), and forwards every MCP
 JSON-RPC message bidirectionally to the remote endpoint with a fresh
 bearer token attached. Same auth lifecycle as armis-appsec-mcp.
@@ -79,14 +79,14 @@ def _resolve_config() -> tuple[str, str, str, str | None, str | None]:
         raise RuntimeError("ARMIS_CLIENT_SECRET is not set in environment.")
 
     # ARMIS_TENANT_ID is the Moose tenant id (preferred — matches
-    # armis-cli / armis-appsec). ARMIS_TENANT_SLUG is the knowledge-native
+    # armis-cli / armis-appsec). ARMIS_KNOWLEDGE_TENANT_SLUG is the knowledge-native
     # slug, kept for legacy installs. Prefer ARMIS_TENANT_ID when both
     # are set so the user only ever has to update one place.
     armis_tenant_id = os.environ.get("ARMIS_TENANT_ID") or None
-    tenant_slug = os.environ.get("ARMIS_TENANT_SLUG") or None
+    tenant_slug = os.environ.get("ARMIS_KNOWLEDGE_TENANT_SLUG") or None
     if not armis_tenant_id and not tenant_slug:
         raise RuntimeError(
-            "Neither ARMIS_TENANT_ID nor ARMIS_TENANT_SLUG is set in environment."
+            "Neither ARMIS_TENANT_ID nor ARMIS_KNOWLEDGE_TENANT_SLUG is set in environment."
         )
     # Force exclusivity at the wire level so the backend doesn't have to
     # reconcile two identifiers it might disagree about.

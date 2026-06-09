@@ -22,4 +22,4 @@ Get tenant-specific guidance for a language or runtime from the **stage** enviro
 
 - Use the canonical lowercase language name (`python`, `go`, `typescript`, `javascript`, `java`, `rust`, `ruby`).
 - If the tool returns "no guidance", continue with general best practices and tell the user the org has no specific guidance for that language.
-- Auth errors → check `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_TENANT_SLUG` are set; rotate at `knowledge.moose-stg.armis.com/settings/integrations` if needed.
+- Auth errors → check `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_KNOWLEDGE_TENANT_SLUG` are set; rotate at `knowledge.moose-stg.armis.com/settings/integrations` if needed.

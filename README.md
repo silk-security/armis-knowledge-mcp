@@ -40,7 +40,7 @@ for the original MCP-vs-skill split.
 
 - MCP variant: `bridge.py` + `auth.py` + `run.sh` form a local stdio MCP
   server. The bridge exchanges client credentials + tenant identifier
-  (`ARMIS_TENANT_ID` or `ARMIS_TENANT_SLUG`) for a short-lived JWT on
+  (`ARMIS_TENANT_ID` or `ARMIS_KNOWLEDGE_TENANT_SLUG`) for a short-lived JWT on
   startup and forwards every JSON-RPC message to the remote
   streamable-HTTP MCP endpoint with a fresh bearer attached. Same auth
   lifecycle as [armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp).
@@ -123,7 +123,7 @@ export ARMIS_CLIENT_ID='<your-id>'
 export ARMIS_CLIENT_SECRET='<your-secret>'
 # Prefer ARMIS_TENANT_ID — same Moose tenant id as armis-cli / armis-appsec.
 export ARMIS_TENANT_ID='<your-moose-tenant-id>'
-# Legacy: export ARMIS_TENANT_SLUG='<your-tenant>'
+# Legacy: export ARMIS_KNOWLEDGE_TENANT_SLUG='<your-tenant>'
 ```
 
 ### Shell-skills variant — env + keychain

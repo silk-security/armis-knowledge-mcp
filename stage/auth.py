@@ -9,7 +9,7 @@ The tenant identifier is one of:
   - `ARMIS_TENANT_ID` — the Moose tenant id. Preferred: it's the same
     identifier the user already configures for armis-cli / armis-appsec,
     so customers don't have to learn a separate "knowledge slug".
-  - `ARMIS_TENANT_SLUG` — knowledge-native slug. Kept for any installs
+  - `ARMIS_KNOWLEDGE_TENANT_SLUG` — knowledge-native slug. Kept for any installs
     provisioned before Moose tenant ids became the canonical handle.
 
 Exactly one of the two must be set; if both are present, `ARMIS_TENANT_ID`
