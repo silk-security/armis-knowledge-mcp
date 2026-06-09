@@ -8,8 +8,9 @@ to keep a long-lived `ARMIS_KNOWLEDGE_TOKEN_*` env var refreshed by hand
 (or by a session-start hook racing with launchctl).
 
 This bridge runs locally as a stdio MCP server, exchanges
-`ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_TENANT_SLUG` for a JWT
-on first use (and refreshes <5 min from expiry), and forwards every MCP
+`ARMIS_CLIENT_ID` + `ARMIS_CLIENT_SECRET` + a tenant identifier
+(`ARMIS_TENANT_ID` preferred, `ARMIS_TENANT_SLUG` legacy) for a JWT on
+first use (and refreshes <5 min from expiry), and forwards every MCP
 JSON-RPC message bidirectionally to the remote endpoint with a fresh
 bearer token attached. Same auth lifecycle as armis-appsec-mcp.
 """
@@ -60,10 +61,12 @@ class BearerAuth(httpx.Auth):
             yield request
 
 
-def _resolve_config() -> tuple[str, str, str, str]:
-    """Read configuration from env. Returns (api_url, mcp_url, client_id, tenant_slug).
+def _resolve_config() -> tuple[str, str, str, str | None, str | None]:
+    """Read configuration from env.
 
-    Missing required env vars raise RuntimeError with an actionable message
+    Returns (api_url, mcp_url, client_id, armis_tenant_id, tenant_slug).
+    Exactly one of armis_tenant_id / tenant_slug is non-None. Missing
+    required env vars raise RuntimeError with an actionable message
     rather than crashing later inside an async task group.
     """
     api_url = os.environ.get("ARMIS_KNOWLEDGE_API_URL") or _DEFAULT_API_URL
@@ -75,11 +78,22 @@ def _resolve_config() -> tuple[str, str, str, str]:
     if not os.environ.get("ARMIS_CLIENT_SECRET"):
         raise RuntimeError("ARMIS_CLIENT_SECRET is not set in environment.")
 
-    tenant_slug = os.environ.get("ARMIS_TENANT_SLUG", "")
-    if not tenant_slug:
-        raise RuntimeError("ARMIS_TENANT_SLUG is not set in environment.")
+    # ARMIS_TENANT_ID is the Moose tenant id (preferred — matches
+    # armis-cli / armis-appsec). ARMIS_TENANT_SLUG is the knowledge-native
+    # slug, kept for legacy installs. Prefer ARMIS_TENANT_ID when both
+    # are set so the user only ever has to update one place.
+    armis_tenant_id = os.environ.get("ARMIS_TENANT_ID") or None
+    tenant_slug = os.environ.get("ARMIS_TENANT_SLUG") or None
+    if not armis_tenant_id and not tenant_slug:
+        raise RuntimeError(
+            "Neither ARMIS_TENANT_ID nor ARMIS_TENANT_SLUG is set in environment."
+        )
+    # Force exclusivity at the wire level so the backend doesn't have to
+    # reconcile two identifiers it might disagree about.
+    if armis_tenant_id:
+        tenant_slug = None
 
-    return api_url, mcp_url, client_id, tenant_slug
+    return api_url, mcp_url, client_id, armis_tenant_id, tenant_slug
 
 
 async def _pump(
@@ -122,9 +136,14 @@ def _find_leaf(exc: BaseException, *types: type[BaseException]) -> BaseException
 
 
 async def _run_bridge() -> None:
-    api_url, mcp_url, client_id, tenant_slug = _resolve_config()
+    api_url, mcp_url, client_id, armis_tenant_id, tenant_slug = _resolve_config()
 
-    jwt_auth = JWTAuth(api_url=api_url, client_id=client_id, tenant_slug=tenant_slug)
+    jwt_auth = JWTAuth(
+        api_url=api_url,
+        client_id=client_id,
+        armis_tenant_id=armis_tenant_id,
+        tenant_slug=tenant_slug,
+    )
     # Force the first exchange now so credential errors surface at startup
     # (visible in stderr / Claude Code's MCP server log) rather than on the
     # first tool call as a confusing JSON-RPC error.

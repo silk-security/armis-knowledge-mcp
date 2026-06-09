@@ -16,12 +16,13 @@ that can be called in the same conversation.
 
 Each plugin ships a small **local stdio bridge** (`bridge.py` + `auth.py` +
 `run.sh`) that runs as the MCP server in the user's Claude Code process. The
-bridge exchanges `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_TENANT_SLUG`
-for a short-lived JWT on startup and forwards every JSON-RPC message to the
-remote streamable-HTTP MCP endpoint with a fresh bearer token attached. Same
-auth lifecycle as [armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp).
-On first launch `run.sh` bootstraps a Python venv inside the plugin directory
-(~10 MB; one-time, ~5 s) and reuses it on subsequent launches.
+bridge exchanges `ARMIS_CLIENT_ID` + `ARMIS_CLIENT_SECRET` + a tenant identifier
+(`ARMIS_TENANT_ID` or `ARMIS_TENANT_SLUG`) for a short-lived JWT on startup and
+forwards every JSON-RPC message to the remote streamable-HTTP MCP endpoint with
+a fresh bearer token attached. Same auth lifecycle as
+[armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp). On first
+launch `run.sh` bootstraps a Python venv inside the plugin directory (~10 MB;
+one-time, ~5 s) and reuses it on subsequent launches.
 
 This bundle contains **no knowledge data**. The data lives server-side
 (per-tenant, in S3) and is queried over HTTPS with the user's bearer token.
@@ -94,7 +95,12 @@ is no `ARMIS_KNOWLEDGE_TOKEN_*` to manage):
 ```bash
 export ARMIS_CLIENT_ID='<your-id>'
 export ARMIS_CLIENT_SECRET='<your-secret>'
-export ARMIS_TENANT_SLUG='<your-tenant>'
+
+# Tenant: pick ONE of these. Prefer ARMIS_TENANT_ID — it's the same Moose
+# tenant id used by armis-cli / armis-appsec, so you only configure it once.
+# ARMIS_TENANT_SLUG is the knowledge-native slug, kept for legacy installs.
+export ARMIS_TENANT_ID='<your-moose-tenant-id>'
+# export ARMIS_TENANT_SLUG='<your-tenant>'
 ```
 
 ## Publishing

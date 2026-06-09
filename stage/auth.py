@@ -1,8 +1,19 @@
 """JWT auth for the local stdio bridge.
 
-Exchanges ARMIS_CLIENT_ID / ARMIS_CLIENT_SECRET / ARMIS_TENANT_SLUG for a
-short-lived bearer token via POST /api/v1/auth/token on the knowledge API.
-Token is held in memory and refreshed when within 5 min of expiry.
+Exchanges ARMIS_CLIENT_ID + ARMIS_CLIENT_SECRET + a tenant identifier for
+a short-lived bearer token via POST /api/v1/auth/token on the knowledge
+API. Token is held in memory and refreshed when within 5 min of expiry.
+
+The tenant identifier is one of:
+
+  - `ARMIS_TENANT_ID` — the Moose tenant id. Preferred: it's the same
+    identifier the user already configures for armis-cli / armis-appsec,
+    so customers don't have to learn a separate "knowledge slug".
+  - `ARMIS_TENANT_SLUG` — knowledge-native slug. Kept for any installs
+    provisioned before Moose tenant ids became the canonical handle.
+
+Exactly one of the two must be set; if both are present, `ARMIS_TENANT_ID`
+wins (matches the backend's resolution order in routes/mcp.py).
 
 Mirrors the shape of armis-appsec-mcp/auth.py so behavior is consistent
 across the two MCPs.
@@ -32,9 +43,21 @@ class JWTAuth:
     HTTP session, so concurrent access is not a concern.
     """
 
-    def __init__(self, api_url: str, client_id: str, tenant_slug: str) -> None:
+    def __init__(
+        self,
+        api_url: str,
+        client_id: str,
+        *,
+        armis_tenant_id: str | None = None,
+        tenant_slug: str | None = None,
+    ) -> None:
+        if not armis_tenant_id and not tenant_slug:
+            raise RuntimeError(
+                "JWTAuth requires either armis_tenant_id or tenant_slug."
+            )
         self._api_url = api_url
         self._client_id = client_id
+        self._armis_tenant_id = armis_tenant_id
         self._tenant_slug = tenant_slug
         self._token: str | None = None
         self._expires_at: float = 0.0
@@ -52,21 +75,26 @@ class JWTAuth:
         if not client_secret:
             raise RuntimeError("ARMIS_CLIENT_SECRET is not set in environment.")
 
+        # Build payload with whichever tenant identifier was configured.
+        # Backend prefers armis_tenant_id when both are present, but only
+        # one is sent here so the wire format stays minimal.
+        payload: dict[str, str] = {
+            "client_id": self._client_id,
+            "client_secret": client_secret,
+        }
+        if self._armis_tenant_id:
+            payload["armis_tenant_id"] = self._armis_tenant_id
+        else:
+            assert self._tenant_slug is not None  # __init__ enforces this
+            payload["tenant_slug"] = self._tenant_slug
+
         try:
-            response = httpx.post(
-                url,
-                json={
-                    "client_id": self._client_id,
-                    "client_secret": client_secret,
-                    "tenant_slug": self._tenant_slug,
-                },
-                timeout=30.0,
-            )
+            response = httpx.post(url, json=payload, timeout=30.0)
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
                 raise RuntimeError(
-                    "Authentication failed: invalid client_id/client_secret/tenant_slug"
+                    "Authentication failed: invalid client_id/client_secret/tenant"
                 ) from e
             raise RuntimeError(f"Authentication failed: HTTP {e.response.status_code}") from e
         except httpx.TimeoutException as e:
