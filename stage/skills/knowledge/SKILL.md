@@ -1,9 +1,9 @@
 ---
-name: knowledge-stage
-description: "Query the Armis Knowledge base (STAGE environment) for organizational standards, policies, and tenant-specific guidance. Use when generating, reviewing, or remediating code so the work matches the organization's standards. Triggers: /knowledge-stage, what are our standards for, what does our org say about, search knowledge, list standards, knowledge base."
+name: knowledge
+description: "Query the Armis Knowledge base (STAGE environment) for organizational standards, policies, and tenant-specific guidance. Use when generating, reviewing, or remediating code so the work matches the organization's standards. Triggers: /knowledge, what are our standards for, what does our org say about, search knowledge, list standards, knowledge base."
 ---
 
-# /knowledge-stage
+# /knowledge
 
 Query the Armis Knowledge base in the **stage** environment (`knowledge-mcp.moose-stg.armis.com`). The data lives server-side; this skill routes user intent to the right MCP tool.
 
@@ -11,8 +11,8 @@ Query the Armis Knowledge base in the **stage** environment (`knowledge-mcp.moos
 
 - Writing or reviewing security-sensitive code → call `mcp__armis_knowledge_stage__list_standards("project")`, then `mcp__armis_knowledge_stage__get_cwe_remediation` for any CWE relevant to the work.
 - The user asks "what are our standards for X?" or "what does our org say about Y?" → `mcp__armis_knowledge_stage__search_knowledge(query)`.
-- The user runs `/knowledge-stage <query>` → `mcp__armis_knowledge_stage__search_knowledge(query)`.
-- The user runs `/knowledge-stage list <scope>` (scope ∈ org, dept, team, project) → `mcp__armis_knowledge_stage__list_standards(scope)`.
+- The user runs `/knowledge <query>` → `mcp__armis_knowledge_stage__search_knowledge(query)`.
+- The user runs `/knowledge list <scope>` (scope ∈ org, dept, team, project) → `mcp__armis_knowledge_stage__list_standards(scope)`.
 
 ## Priority
 

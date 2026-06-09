@@ -1,6 +1,6 @@
 ---
-name: framework-guidance-stage
-description: "Fetch organization-specific guidance for a web framework (Django, Flask, FastAPI, Express, Rails, Spring, etc.) from the Armis Knowledge STAGE environment. Use when generating or reviewing code that uses a specific framework. Triggers: /framework-guidance-stage, how do we use Django, Flask conventions, our patterns for Express, framework standards."
+name: framework-guidance
+description: "Fetch organization-specific guidance for a web framework (Django, Flask, FastAPI, Express, Rails, Spring, etc.) from the Armis Knowledge STAGE environment. Use when generating or reviewing code that uses a specific framework. Triggers: /framework-guidance, how do we use Django, Flask conventions, our patterns for Express, framework standards."
 allowed-tools:
   - Bash(security *)
   - Bash(secret-tool *)
@@ -9,14 +9,14 @@ allowed-tools:
   - Bash(source *)
 ---
 
-# /framework-guidance-stage
+# /framework-guidance
 
 Fetch Armis-specific guidance for a web framework from the **stage** Knowledge backend.
 
 ```bash
 source "$CLAUDE_PLUGIN_ROOT/lib/armis-knowledge.sh"
 TENANT_ID=$(ak_tenant_id)
-NAME="${ARGUMENTS:?usage: /framework-guidance-stage <framework>  (e.g. django, flask, fastapi, express, rails, spring)}"
+NAME="${ARGUMENTS:?usage: /framework-guidance <framework>  (e.g. django, flask, fastapi, express, rails, spring)}"
 
 ak_get /api/knowledge/content-pack \
   --data-urlencode "tenant_id=$TENANT_ID" \
@@ -37,4 +37,4 @@ ak_get /api/knowledge/content-pack \
 
 - Use the canonical lowercase framework name (`django`, `flask`, `fastapi`,
   `express`, `rails`, `spring`).
-- Auth errors → see the `knowledge-stage` skill's "Errors" section.
+- Auth errors → see the `knowledge` skill's "Errors" section.

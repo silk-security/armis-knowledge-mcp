@@ -15,7 +15,7 @@ environment because they register the same slash commands.
 
 | Plugin | Variant | Backend | Slash commands |
 |---|---|---|---|
-| `armis-knowledge-stage` | MCP | `knowledge-mcp.moose-stg.armis.com` | `/knowledge-stage`, `/cwe-fix-stage`, `/framework-guidance-stage`, `/tech-guidance-stage` |
+| `armis-knowledge-stage` | MCP | `knowledge-mcp.moose-stg.armis.com` | `/knowledge`, `/cwe-fix`, `/framework-guidance`, `/tech-guidance` |
 | `armis-knowledge-skills-stage` | shell-skills | `knowledge-api.moose-stg.armis.com` | same as MCP stage variant |
 | `armis-knowledge-dev` | MCP (maintainers) | `knowledge-mcp.moose-dev.armis.com` | `/knowledge-dev`, `/cwe-fix-dev`, `/framework-guidance-dev`, `/tech-guidance-dev` |
 | `armis-knowledge-skills-dev` | shell-skills (maintainers) | `knowledge-api.moose-dev.armis.com` | same as MCP dev variant |

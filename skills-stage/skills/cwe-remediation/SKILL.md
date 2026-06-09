@@ -1,6 +1,6 @@
 ---
-name: cwe-remediation-stage
-description: "Fetch organization-specific remediation guidance for a given CWE from the Armis Knowledge STAGE environment. Use when fixing a vulnerability identified by CWE ID, when triaging scanner findings, or when the user asks how to remediate a specific weakness. Triggers: /cwe-fix-stage, how do we fix CWE-, remediation for CWE, false positive CWE, cwe guidance."
+name: cwe-remediation
+description: "Fetch organization-specific remediation guidance for a given CWE from the Armis Knowledge STAGE environment. Use when fixing a vulnerability identified by CWE ID, when triaging scanner findings, or when the user asks how to remediate a specific weakness. Triggers: /cwe-fix, how do we fix CWE-, remediation for CWE, false positive CWE, cwe guidance."
 allowed-tools:
   - Bash(security *)
   - Bash(secret-tool *)
@@ -9,14 +9,14 @@ allowed-tools:
   - Bash(source *)
 ---
 
-# /cwe-fix-stage
+# /cwe-fix
 
 Fetch Armis-specific remediation for a CWE from the **stage** Knowledge backend.
 
 ```bash
 source "$CLAUDE_PLUGIN_ROOT/lib/armis-knowledge.sh"
 TENANT_ID=$(ak_tenant_id)
-CWE="${ARGUMENTS:?usage: /cwe-fix-stage CWE-89}"
+CWE="${ARGUMENTS:?usage: /cwe-fix CWE-89}"
 
 ak_get /api/knowledge/content-pack \
   --data-urlencode "tenant_id=$TENANT_ID" \
@@ -37,4 +37,4 @@ Response shape: `{id, title, content_pack, path, body_text}`.
 ## Notes
 
 - Canonical CWE format is `CWE-<number>` (e.g. `CWE-89`, `CWE-79`).
-- Auth errors → see the `knowledge-stage` skill's "Errors" section.
+- Auth errors → see the `knowledge` skill's "Errors" section.

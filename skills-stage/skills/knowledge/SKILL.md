@@ -1,6 +1,6 @@
 ---
-name: knowledge-stage
-description: "Query the Armis Knowledge base (STAGE) for organizational standards, policies, and tenant-specific guidance. Use when generating, reviewing, or remediating code so the work matches the organization's standards. Triggers: /knowledge-stage, what are our standards for, what does our org say about, search knowledge, list standards."
+name: knowledge
+description: "Query the Armis Knowledge base (STAGE) for organizational standards, policies, and tenant-specific guidance. Use when generating, reviewing, or remediating code so the work matches the organization's standards. Triggers: /knowledge, what are our standards for, what does our org say about, search knowledge, list standards."
 allowed-tools:
   - Bash(security *)
   - Bash(secret-tool *)
@@ -9,7 +9,7 @@ allowed-tools:
   - Bash(source *)
 ---
 
-# /knowledge-stage
+# /knowledge
 
 Query the Armis Knowledge backend in the **stage** environment
 (`knowledge-api.moose-stg.armis.com`) directly via HTTPS — no MCP server
@@ -35,7 +35,7 @@ TENANT_ID=$(ak_tenant_id)
 
 ### Search
 
-`/knowledge-stage <query>` — full-text search over enabled docs:
+`/knowledge <query>` — full-text search over enabled docs:
 
 ```bash
 ak_get /api/knowledge/search \
@@ -53,7 +53,7 @@ ak_get "/api/knowledge/$DOC_ID" --data-urlencode "tenant_id=$TENANT_ID"
 
 ### List by scope
 
-`/knowledge-stage list <scope>` — `scope` ∈ `organization`, `department`, `team`, `project`:
+`/knowledge list <scope>` — `scope` ∈ `organization`, `department`, `team`, `project`:
 
 ```bash
 ak_get /api/knowledge/by-scope \
