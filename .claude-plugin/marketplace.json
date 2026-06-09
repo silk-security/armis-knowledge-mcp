@@ -1,25 +1,39 @@
 {
-  "name": "armis-knowledge-mcp",
+  "name": "armis-knowledge",
   "owner": {
     "name": "Armis Security"
   },
   "metadata": {
-    "description": "Query the Armis Knowledge base — organizational standards, CWE remediation, framework and technology guidance — directly from your coding agent. Ships dev and stage variants so they can be installed side-by-side.",
-    "version": "0.3.0",
+    "description": "Query the Armis Knowledge base — organizational standards, CWE remediation, framework and technology guidance — directly from your coding agent. Ships an MCP variant (works with Claude Code, Claude Desktop, Cursor, etc.) and a Claude-Code-only shell-skills variant (no MCP runtime, OS keychain auth) for each environment. Pick one variant per environment — both variants register the same slash commands, so installing both simultaneously will collide.",
+    "version": "0.4.0",
     "pluginRoot": ".."
   },
   "plugins": [
     {
       "name": "armis-knowledge-dev",
-      "description": "DEV environment (knowledge-mcp.moose-dev.armis.com). Adds /knowledge-dev, /cwe-fix-dev, /framework-guidance-dev, and /tech-guidance-dev commands. Reads ARMIS_CLIENT_ID, ARMIS_CLIENT_SECRET, and ARMIS_TENANT_SLUG; exchanges them for a short-lived JWT on startup. Tenant isolation enforced server-side; no knowledge data stored on disk.",
+      "description": "MCP variant, DEV environment (knowledge-mcp.moose-dev.armis.com). Adds /knowledge-dev, /cwe-fix-dev, /framework-guidance-dev, and /tech-guidance-dev. Reads ARMIS_CLIENT_ID, ARMIS_CLIENT_SECRET, and ARMIS_TENANT_ID; exchanges them for a short-lived JWT on startup. Tenant isolation enforced server-side; no knowledge data stored on disk.",
       "source": "./dev/",
       "license": "Apache-2.0",
       "category": "development"
     },
     {
       "name": "armis-knowledge-stage",
-      "description": "STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge-stage, /cwe-fix-stage, /framework-guidance-stage, and /tech-guidance-stage commands. Reads ARMIS_CLIENT_ID, ARMIS_CLIENT_SECRET, and ARMIS_TENANT_SLUG; exchanges them for a short-lived JWT on startup. Tenant isolation enforced server-side; no knowledge data stored on disk.",
+      "description": "MCP variant, STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge-stage, /cwe-fix-stage, /framework-guidance-stage, and /tech-guidance-stage. Reads ARMIS_CLIENT_ID, ARMIS_CLIENT_SECRET, and ARMIS_TENANT_ID; exchanges them for a short-lived JWT on startup. Tenant isolation enforced server-side; no knowledge data stored on disk.",
       "source": "./stage/",
+      "license": "Apache-2.0",
+      "category": "development"
+    },
+    {
+      "name": "armis-knowledge-skills-dev",
+      "description": "Shell-skills variant, DEV environment (knowledge-api.moose-dev.armis.com). Same /knowledge-dev, /cwe-fix-dev, /framework-guidance-dev, /tech-guidance-dev commands as the MCP variant, but implemented as pure shell skills that hit the REST API directly via curl — no MCP runtime, no Python install. Reads ARMIS_KNOWLEDGE_CLIENT_ID and ARMIS_KNOWLEDGE_TENANT_SLUG; loads client_secret from the OS keychain (service: armis-knowledge-dev). Claude Code only. Don't install alongside armis-knowledge-dev — same slash commands.",
+      "source": "./skills-dev/",
+      "license": "Apache-2.0",
+      "category": "development"
+    },
+    {
+      "name": "armis-knowledge-skills-stage",
+      "description": "Shell-skills variant, STAGE environment (knowledge-api.moose-stg.armis.com). Same /knowledge-stage, /cwe-fix-stage, /framework-guidance-stage, /tech-guidance-stage commands as the MCP variant, but implemented as pure shell skills that hit the REST API directly via curl — no MCP runtime, no Python install. Reads ARMIS_KNOWLEDGE_CLIENT_ID and ARMIS_KNOWLEDGE_TENANT_SLUG; loads client_secret from the OS keychain (service: armis-knowledge-stage). Claude Code only. Don't install alongside armis-knowledge-stage — same slash commands.",
+      "source": "./skills-stage/",
       "license": "Apache-2.0",
       "category": "development"
     }

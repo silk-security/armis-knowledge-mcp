@@ -1,67 +1,77 @@
 # Armis Knowledge — Claude Code plugin bundle
 
-Claude Code marketplace that ships **two plugins** — one for each environment of
-the Armis Knowledge MCP server — so a single agent session can talk to dev and
-stage independently:
+Claude Code marketplace that ships **two variants** of the Armis Knowledge
+client — an MCP variant and a shell-skills variant — for each environment.
+Pick the variant that fits your tooling; don't install both for the same
+environment because they register the same slash commands.
 
-| Plugin | Backend | Slash commands |
-|---|---|---|
-| `armis-knowledge-dev` | `knowledge-mcp.moose-dev.armis.com` | `/knowledge-dev`, `/cwe-fix-dev`, `/framework-guidance-dev`, `/tech-guidance-dev` |
-| `armis-knowledge-stage` | `knowledge-mcp.moose-stg.armis.com` | `/knowledge-stage`, `/cwe-fix-stage`, `/framework-guidance-stage`, `/tech-guidance-stage` |
+> **Use the `-stage` plugins.** Stage runs on `moose-stg.armis.com` and is
+> the env everyone hits today. The `-dev` plugins are for maintainers
+> only — they point at `moose-dev.armis.com`, which is not multi-user. A
+> `-prod` variant will be added once MooseProd is live.
 
-The plugins use distinct MCP server names (`armis-knowledge-dev` vs
-`armis-knowledge-stage`), so installing both produces two separate tool
-namespaces (`mcp__armis_knowledge_dev__*` and `mcp__armis_knowledge_stage__*`)
-that can be called in the same conversation.
+| Plugin | Variant | Backend | Slash commands |
+|---|---|---|---|
+| `armis-knowledge-stage` | MCP | `knowledge-mcp.moose-stg.armis.com` | `/knowledge-stage`, `/cwe-fix-stage`, `/framework-guidance-stage`, `/tech-guidance-stage` |
+| `armis-knowledge-skills-stage` | shell-skills | `knowledge-api.moose-stg.armis.com` | same as MCP stage variant |
+| `armis-knowledge-dev` | MCP (maintainers) | `knowledge-mcp.moose-dev.armis.com` | `/knowledge-dev`, `/cwe-fix-dev`, `/framework-guidance-dev`, `/tech-guidance-dev` |
+| `armis-knowledge-skills-dev` | shell-skills (maintainers) | `knowledge-api.moose-dev.armis.com` | same as MCP dev variant |
 
-Each plugin ships a small **local stdio bridge** (`bridge.py` + `auth.py` +
-`run.sh`) that runs as the MCP server in the user's Claude Code process. The
-bridge exchanges `ARMIS_CLIENT_ID` + `ARMIS_CLIENT_SECRET` + a tenant identifier
-(`ARMIS_TENANT_ID` or `ARMIS_TENANT_SLUG`) for a short-lived JWT on startup and
-forwards every JSON-RPC message to the remote streamable-HTTP MCP endpoint with
-a fresh bearer token attached. Same auth lifecycle as
-[armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp). On first
-launch `run.sh` bootstraps a Python venv inside the plugin directory (~10 MB;
-one-time, ~5 s) and reuses it on subsequent launches.
+## Which variant?
+
+- **MCP variant** — works with any MCP-aware client (Claude Code, Claude
+  Desktop, Cursor, …). Requires Python on first launch (the bridge
+  bootstraps a small venv). Reads `ARMIS_CLIENT_ID` /
+  `ARMIS_CLIENT_SECRET` / `ARMIS_TENANT_ID` from env.
+- **Shell-skills variant** — Claude Code only. No MCP runtime, no Python
+  install — pure shell skills that hit the REST API directly via `curl`.
+  Reads `ARMIS_KNOWLEDGE_CLIENT_ID` / `ARMIS_KNOWLEDGE_TENANT_SLUG` from
+  env; loads `client_secret` from the OS keychain (`security` on macOS,
+  `secret-tool` on Linux), so the secret never lives in a shell rc.
+
+Tool reach favors the MCP variant; install simplicity and tighter
+secret-storage favor the shell variant. See [ADR 0003](../../../docs/adr/0003-mcp-vs-skill.md)
+for the original MCP-vs-skill split.
+
+## How both variants share the wire
+
+- MCP variant: `bridge.py` + `auth.py` + `run.sh` form a local stdio MCP
+  server. The bridge exchanges client credentials + tenant identifier
+  (`ARMIS_TENANT_ID` or `ARMIS_TENANT_SLUG`) for a short-lived JWT on
+  startup and forwards every JSON-RPC message to the remote
+  streamable-HTTP MCP endpoint with a fresh bearer attached. Same auth
+  lifecycle as [armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp).
+- Shell-skills variant: `lib/armis-knowledge.sh` does the same JWT
+  exchange directly (`POST /api/v1/auth/token`), caches the token in
+  `$TMPDIR` mode-600 for ~55min, and wraps `curl` with the bearer
+  header. Each `SKILL.md` sources the lib and calls `ak_get` on a REST
+  endpoint.
 
 This bundle contains **no knowledge data**. The data lives server-side
 (per-tenant, in S3) and is queried over HTTPS with the user's bearer token.
-That's the whole reason the plugin replaces the
-[knowledge_driven](https://github.com/andrewgrealy/knowledge_driven) POC's
-`~/.claude/skills/knowledge/` setup — see [ADR 0003](../../../docs/adr/0003-mcp-vs-skill.md).
 
-> **Prod note:** stage is scaffolded ahead of the stage MCP being live; until
-> `knowledge-mcp.moose-stg.armis.com` resolves, `/knowledge-stage` etc. will
-> return connection errors. A prod variant will be added the same way once
+> **Prod note:** there is no prod variant yet. Stage on `moose-stg` is what
+> everyone uses today. A prod variant will be added the same way once
 > MooseProd is up.
 
 ## Layout
 
 ```
 plugin/
-├── .claude-plugin/marketplace.json   manifest listing both plugins
-├── dev/
+├── .claude-plugin/marketplace.json   manifest listing all four plugins
+├── dev/                              MCP variant, dev
 │   ├── .mcp.json                     server: armis-knowledge-dev → moose-dev
 │   ├── auth.py                       JWT exchange + cache + refresh
 │   ├── bridge.py                     stdio↔streamable-HTTP MCP proxy
 │   ├── run.sh                        venv bootstrap + entrypoint
 │   ├── requirements.txt              mcp, httpx, anyio
-│   └── skills/                       /knowledge-dev, /cwe-fix-dev, …
-│       ├── knowledge/SKILL.md
-│       ├── cwe-remediation/SKILL.md
-│       ├── framework-guidance/SKILL.md
-│       └── tech-guidance/SKILL.md
-├── stage/
-│   ├── .mcp.json                     server: armis-knowledge-stage → moose-stg
-│   ├── auth.py                       (mirror of dev/auth.py)
-│   ├── bridge.py                     (mirror of dev/bridge.py with stage URLs)
-│   ├── run.sh
-│   ├── requirements.txt
-│   └── skills/                       /knowledge-stage, /cwe-fix-stage, …
-│       ├── knowledge/SKILL.md
-│       ├── cwe-remediation/SKILL.md
-│       ├── framework-guidance/SKILL.md
-│       └── tech-guidance/SKILL.md
+│   └── skills/                       SKILL.md files routing to MCP tools
+├── stage/                            MCP variant, stage (mirror of dev/)
+├── skills-dev/                       shell-skills variant, dev
+│   ├── .claude-plugin/plugin.json
+│   ├── lib/armis-knowledge.sh        JWT mint + ak_get / ak_post helpers
+│   └── skills/                       SKILL.md files calling ak_get directly
+├── skills-stage/                     shell-skills variant, stage (mirror of skills-dev/)
 └── README.md
 ```
 
@@ -78,30 +88,56 @@ TL;DR — pick either marketplace URL:
 /plugin marketplace add silk-security/armis-knowledge-mcp
 ```
 
-Then install the plugins:
+Then install **one** plugin. For Claude Desktop / Cursor / other MCP
+clients, install the MCP variant. For Claude-Code-only setups where you'd
+rather skip the Python venv, install the shell-skills variant:
 
 ```
-/plugin install armis-knowledge-dev@armis-knowledge-mcp
-/plugin install armis-knowledge-stage@armis-knowledge-mcp   # optional
+# MCP variant
+/plugin install armis-knowledge-stage@armis-knowledge
+
+# OR shell-skills variant (Claude Code only)
+/plugin install armis-knowledge-skills-stage@armis-knowledge
 ```
+
+Maintainers pointing at the dev backend swap `-stage` → `-dev` in the
+plugin name above.
 
 Both URLs serve the same content — every push to `main` of this repo
 publishes to both. New installs should use the `ArmisSecurity` URL.
 
-…then export your credentials in the shell that launches Claude Code (the
-plugin's bridge reads them and exchanges them for a JWT on its own — there
-is no `ARMIS_KNOWLEDGE_TOKEN_*` to manage):
+> **Repo name vs marketplace name.** The marketplace is named
+> `armis-knowledge` (it now serves both MCP and shell-skills variants),
+> but the publish target repo is still `armis-knowledge-mcp` for
+> backwards-compat with existing customer installs. The mismatch is
+> intentional and harmless — `marketplace add <repo-url>` doesn't care
+> what the marketplace itself is named.
+
+### MCP variant — env
 
 ```bash
 export ARMIS_CLIENT_ID='<your-id>'
 export ARMIS_CLIENT_SECRET='<your-secret>'
-
-# Tenant: pick ONE of these. Prefer ARMIS_TENANT_ID — it's the same Moose
-# tenant id used by armis-cli / armis-appsec, so you only configure it once.
-# ARMIS_TENANT_SLUG is the knowledge-native slug, kept for legacy installs.
+# Prefer ARMIS_TENANT_ID — same Moose tenant id as armis-cli / armis-appsec.
 export ARMIS_TENANT_ID='<your-moose-tenant-id>'
-# export ARMIS_TENANT_SLUG='<your-tenant>'
+# Legacy: export ARMIS_TENANT_SLUG='<your-tenant>'
 ```
+
+### Shell-skills variant — env + keychain
+
+```bash
+export ARMIS_KNOWLEDGE_CLIENT_ID='<your-id>'
+export ARMIS_KNOWLEDGE_TENANT_SLUG='<your-tenant>'
+
+# Store the secret once in the OS keychain (don't put it in your shell rc):
+# macOS:
+security add-generic-password -s armis-knowledge-stage -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w
+# Linux:
+secret-tool store --label='Armis Knowledge stage' service armis-knowledge-stage account "$ARMIS_KNOWLEDGE_CLIENT_ID"
+```
+
+Maintainers using the dev variant: keychain service is `armis-knowledge-dev`
+instead of `armis-knowledge-stage`.
 
 ## Publishing
 
@@ -123,5 +159,5 @@ local path:
 
 ```
 /plugin marketplace add /Users/<you>/work/armis/armis-knowledge/apps/mcp/plugin
-/plugin install armis-knowledge-dev@armis-knowledge-mcp
+/plugin install armis-knowledge-stage@armis-knowledge
 ```
