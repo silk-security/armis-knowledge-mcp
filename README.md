@@ -5,6 +5,9 @@ client — an MCP variant and a shell-skills variant — for each environment.
 Pick the variant that fits your tooling; don't install both for the same
 environment because they register the same slash commands.
 
+> **Already installed?** [USAGE.md](USAGE.md) is the operator cheat sheet for
+> the four slash commands and the triggers that fire each skill on its own.
+
 > **Use the `-stage` plugins.** Stage runs on `moose-stg.armis.com` and is
 > the env everyone hits today. The `-dev` plugins are for maintainers
 > only — they point at `moose-dev.armis.com`, which is not multi-user. A
