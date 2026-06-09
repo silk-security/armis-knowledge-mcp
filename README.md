@@ -148,12 +148,14 @@ instead of `armis-knowledge-stage`.
 [`.github/workflows/publish-plugin.yml`](../../../.github/workflows/publish-plugin.yml)
 on every push to `main` that touches the bundle. The matrix fans out so
 one target failing (token expired, org policy block) doesn't block the
-other. Each leg needs its own repo secret with `contents: write`:
+other. Each leg authenticates differently — ArmisSecurity org policy
+blocks classic PATs, so it uses a GitHub App; silk-security still uses
+a PAT. Both need `contents: write` on the publish target.
 
-| Target | Secret | Notes |
-|---|---|---|
-| [`ArmisSecurity/armis-knowledge-mcp`](https://github.com/ArmisSecurity/armis-knowledge-mcp) | `PLUGIN_PUSH_TOKEN_ARMIS` | Canonical home. ArmisSecurity org blocks classic PATs — use a fine-grained PAT or GitHub App. |
-| [`silk-security/armis-knowledge-mcp`](https://github.com/silk-security/armis-knowledge-mcp) | `PLUGIN_PUSH_TOKEN_SILK` | Legacy mirror; kept so existing installs keep updating. |
+| Target | Auth | Inputs | Notes |
+|---|---|---|---|
+| [`ArmisSecurity/armis-knowledge-mcp`](https://github.com/ArmisSecurity/armis-knowledge-mcp) | GitHub App | `vars.PLUGIN_PUSH_APP_CLIENT_ID` + `secrets.ARMIS_KNOWLEDGE_MCP_PUBLISHER` (App PEM private key) | Canonical home. App must be installed on the target repo. |
+| [`silk-security/armis-knowledge-mcp`](https://github.com/silk-security/armis-knowledge-mcp) | PAT | `secrets.PLUGIN_PUSH_TOKEN_SILK` | Legacy mirror; kept so existing installs keep updating. |
 
 ## Local install (without publishing)
 
