@@ -25,12 +25,12 @@ environment because they register the same slash commands.
 - **MCP variant** — works with any MCP-aware client (Claude Code, Claude
   Desktop, Cursor, …). Requires Python on first launch (the bridge
   bootstraps a small venv). Reads `ARMIS_CLIENT_ID` /
-  `ARMIS_CLIENT_SECRET` / `ARMIS_TENANT_ID` from env.
+  `ARMIS_CLIENT_SECRET` from env.
 - **Shell-skills variant** — Claude Code only. No MCP runtime, no Python
   install — pure shell skills that hit the REST API directly via `curl`.
-  Reads `ARMIS_KNOWLEDGE_CLIENT_ID` / `ARMIS_KNOWLEDGE_TENANT_SLUG` from
-  env; loads `client_secret` from the OS keychain (`security` on macOS,
-  `secret-tool` on Linux), so the secret never lives in a shell rc.
+  Reads `ARMIS_KNOWLEDGE_CLIENT_ID` from env; loads `client_secret` from
+  the OS keychain (`security` on macOS, `secret-tool` on Linux), so the
+  secret never lives in a shell rc.
 
 Tool reach favors the MCP variant; install simplicity and tighter
 secret-storage favor the shell variant. See [ADR 0003](../../../docs/adr/0003-mcp-vs-skill.md)
@@ -39,11 +39,13 @@ for the original MCP-vs-skill split.
 ## How both variants share the wire
 
 - MCP variant: `bridge.py` + `auth.py` + `run.sh` form a local stdio MCP
-  server. The bridge exchanges client credentials + tenant identifier
-  (`ARMIS_TENANT_ID` or `ARMIS_KNOWLEDGE_TENANT_SLUG`) for a short-lived JWT on
-  startup and forwards every JSON-RPC message to the remote
-  streamable-HTTP MCP endpoint with a fresh bearer attached. Same auth
-  lifecycle as [armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp).
+  server. The bridge exchanges client credentials for a short-lived JWT
+  on startup and forwards every JSON-RPC message to the remote
+  streamable-HTTP MCP endpoint with a fresh bearer attached. Tenant
+  routing is resolved server-side from the global
+  `admin.client_credentials` table — the user only needs `client_id` /
+  `client_secret`, not a tenant identifier. Same auth lifecycle as
+  [armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp).
 - Shell-skills variant: `lib/armis-knowledge.sh` does the same JWT
   exchange directly (`POST /api/v1/auth/token`), caches the token in
   `$TMPDIR` mode-600 for ~55min, and wraps `curl` with the bearer
@@ -121,16 +123,15 @@ publishes to both. New installs should use the `ArmisSecurity` URL.
 ```bash
 export ARMIS_CLIENT_ID='<your-id>'
 export ARMIS_CLIENT_SECRET='<your-secret>'
-# Prefer ARMIS_TENANT_ID — same Moose tenant id as armis-cli / armis-appsec.
-export ARMIS_TENANT_ID='<your-moose-tenant-id>'
-# Legacy: export ARMIS_KNOWLEDGE_TENANT_SLUG='<your-tenant>'
 ```
+
+The backend resolves your tenant from `client_id` server-side — there's
+no separate tenant identifier to set.
 
 ### Shell-skills variant — env + keychain
 
 ```bash
 export ARMIS_KNOWLEDGE_CLIENT_ID='<your-id>'
-export ARMIS_KNOWLEDGE_TENANT_SLUG='<your-tenant>'
 
 # Store the secret once in the OS keychain (don't put it in your shell rc):
 # macOS:

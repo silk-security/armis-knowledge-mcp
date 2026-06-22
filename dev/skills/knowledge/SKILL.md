@@ -21,4 +21,4 @@ When multiple standards are returned, apply them in priority order: **project > 
 ## Notes
 
 - Tenant resolution is server-side; never pass a customer/tenant parameter — the bearer token determines scope.
-- If the server returns an auth error, the user's `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_KNOWLEDGE_TENANT_SLUG` env vars are missing or invalid — point them at `knowledge.moose-dev.armis.com/settings/integrations` to issue / rotate credentials.
+- If the server returns an auth error, the user's `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` env vars are missing or invalid — point them at `knowledge.moose-dev.armis.com/settings/integrations` to issue / rotate credentials.

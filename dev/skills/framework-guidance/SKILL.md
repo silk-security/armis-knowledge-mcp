@@ -22,4 +22,4 @@ Get tenant-specific guidance for a web framework from the **dev** environment (`
 
 - Use the canonical lowercase framework name (`django`, `flask`, `fastapi`, `express`, `rails`, `spring`).
 - If the tool returns "no guidance", continue with general best practices and tell the user the org has no specific guidance for that framework.
-- Auth errors → check `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_KNOWLEDGE_TENANT_SLUG` are set; rotate at `knowledge.moose-dev.armis.com/settings/integrations` if needed.
+- Auth errors → check `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` are set; rotate at `knowledge.moose-dev.armis.com/settings/integrations` if needed.

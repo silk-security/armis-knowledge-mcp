@@ -1,6 +1,6 @@
 {
   "name": "armis-knowledge-skills-dev",
-  "description": "DEV environment (knowledge-api.moose-dev.armis.com). Adds /knowledge-dev, /cwe-fix-dev, /framework-guidance-dev, and /tech-guidance-dev as shell skills that call the backend directly. Reads ARMIS_KNOWLEDGE_CLIENT_ID and ARMIS_KNOWLEDGE_TENANT_SLUG; loads client_secret from the OS keychain (service: armis-knowledge-dev). Tenant isolation enforced server-side; no knowledge data stored on disk.",
+  "description": "DEV environment (knowledge-api.moose-dev.armis.com). Adds /knowledge-dev, /cwe-fix-dev, /framework-guidance-dev, and /tech-guidance-dev as shell skills that call the backend directly. Reads ARMIS_KNOWLEDGE_CLIENT_ID; loads client_secret from the OS keychain (service: armis-knowledge-dev). Tenant isolation enforced server-side; no knowledge data stored on disk.",
   "author": {
     "name": "Armis Security"
   },

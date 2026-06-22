@@ -49,7 +49,6 @@ fi
 MISSING=""
 [ -z "${ARMIS_CLIENT_ID:-}" ]     && MISSING="ARMIS_CLIENT_ID"
 [ -z "${ARMIS_CLIENT_SECRET:-}" ] && MISSING="${MISSING:+$MISSING, }ARMIS_CLIENT_SECRET"
-[ -z "${ARMIS_KNOWLEDGE_TENANT_SLUG:-}" ]   && MISSING="${MISSING:+$MISSING, }ARMIS_KNOWLEDGE_TENANT_SLUG"
 if [ -n "$MISSING" ]; then
     echo "ERROR: missing required environment variable(s): $MISSING" >&2
     echo "  Set these in your shell rc / IDE env so the MCP bridge can authenticate." >&2

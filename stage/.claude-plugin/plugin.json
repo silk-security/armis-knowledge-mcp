@@ -1,6 +1,6 @@
 {
   "name": "armis-knowledge-stage",
-  "description": "STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge, /ask, /cwe-fix, /framework-guidance, and /tech-guidance commands. Reads ARMIS_CLIENT_ID, ARMIS_CLIENT_SECRET, and ARMIS_KNOWLEDGE_TENANT_SLUG; exchanges them for a short-lived JWT on startup. Tenant isolation enforced server-side; no knowledge data stored on disk.",
+  "description": "STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge, /ask, /cwe-fix, /framework-guidance, and /tech-guidance commands. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk.",
   "author": {
     "name": "Armis Security"
   },

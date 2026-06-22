@@ -5,7 +5,6 @@
 #
 # Required env (set once per machine, e.g. in ~/.zshrc):
 #   ARMIS_KNOWLEDGE_CLIENT_ID
-#   ARMIS_KNOWLEDGE_TENANT_SLUG
 #
 # Optional env:
 #   ARMIS_KNOWLEDGE_API   override backend URL (default: stage)
@@ -20,14 +19,13 @@ ARMIS_KNOWLEDGE_ENV="${ARMIS_KNOWLEDGE_ENV:-stage}"
 ARMIS_KNOWLEDGE_API="${ARMIS_KNOWLEDGE_API:-https://knowledge-api.moose-stg.armis.com}"
 
 : "${ARMIS_KNOWLEDGE_CLIENT_ID:?set ARMIS_KNOWLEDGE_CLIENT_ID; copy from /settings/integrations on the knowledge webapp}"
-: "${ARMIS_KNOWLEDGE_TENANT_SLUG:?set ARMIS_KNOWLEDGE_TENANT_SLUG (e.g. acme); also on /settings/integrations}"
 
 for _bin in curl jq; do
   command -v "$_bin" >/dev/null || { echo "missing required binary: $_bin" >&2; return 1 2>/dev/null || exit 1; }
 done
 
 _ak_keychain_service="armis-knowledge-${ARMIS_KNOWLEDGE_ENV}"
-_ak_token_cache="${TMPDIR:-/tmp}/${_ak_keychain_service}.${ARMIS_KNOWLEDGE_TENANT_SLUG}.${ARMIS_KNOWLEDGE_CLIENT_ID}.jwt"
+_ak_token_cache="${TMPDIR:-/tmp}/${_ak_keychain_service}.${ARMIS_KNOWLEDGE_CLIENT_ID}.jwt"
 
 _ak_mtime() {
   stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null
@@ -65,8 +63,7 @@ ak_token() {
   local body; body=$(jq -nc \
     --arg id "$ARMIS_KNOWLEDGE_CLIENT_ID" \
     --arg s "$secret" \
-    --arg t "$ARMIS_KNOWLEDGE_TENANT_SLUG" \
-    '{client_id:$id,client_secret:$s,tenant_slug:$t}')
+    '{client_id:$id,client_secret:$s}')
   # mktemp gives an unpredictable path with mode 600, so a local attacker
   # can't pre-create a symlink at the response path and divert curl's
   # output (CWE-377). Trap ensures the file is removed on any exit path.

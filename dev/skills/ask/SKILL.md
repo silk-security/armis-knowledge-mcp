@@ -29,4 +29,4 @@ The tool returns:
 
 - Tenant resolution is server-side; never pass a customer/tenant parameter — the bearer token determines scope.
 - The agent will not edit any document. If it suggests a change in prose, the user has to apply it manually through the editor or the proposals flow.
-- If the server returns an auth error, the user's `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` / `ARMIS_KNOWLEDGE_TENANT_SLUG` env vars are missing or invalid — point them at `knowledge.moose-dev.armis.com/settings/integrations` to issue / rotate credentials.
+- If the server returns an auth error, the user's `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` env vars are missing or invalid — point them at `knowledge.moose-dev.armis.com/settings/integrations` to issue / rotate credentials.

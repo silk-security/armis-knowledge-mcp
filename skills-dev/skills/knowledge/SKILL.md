@@ -17,8 +17,9 @@ in the loop.
 
 ## Auth model
 
-- `client_id` and `tenant_slug` are env vars (`ARMIS_KNOWLEDGE_CLIENT_ID`,
-  `ARMIS_KNOWLEDGE_TENANT_SLUG`).
+- `client_id` is an env var (`ARMIS_KNOWLEDGE_CLIENT_ID`); the backend
+  routes the token exchange to the right tenant by looking the
+  client_id up in the global `admin.client_credentials` table.
 - `client_secret` lives in the OS keychain (service `armis-knowledge-dev`,
   account = `$ARMIS_KNOWLEDGE_CLIENT_ID`).
 - The shared lib mints a fresh JWT on demand and caches it for ~55min in
@@ -72,6 +73,7 @@ Briefly cite which scope each applied standard came from so the user can audit.
   `/settings/integrations` on `knowledge.moose-dev.armis.com`, then update the
   keychain entry: `security add-generic-password -U -s armis-knowledge-dev
   -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w`.
-- `401 missing_bearer_token` — env vars not set. Tell the user to export
-  `ARMIS_KNOWLEDGE_CLIENT_ID` and `ARMIS_KNOWLEDGE_TENANT_SLUG`.
-- `404 tenant_not_found` — slug typo or tenant not provisioned in dev.
+- `401 missing_bearer_token` — env var not set. Tell the user to export
+  `ARMIS_KNOWLEDGE_CLIENT_ID`.
+- `401 invalid_client_credentials` — client_id has no admin routing row
+  (no tenant claims this credential), or secret didn't bcrypt-verify.
