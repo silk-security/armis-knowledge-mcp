@@ -1,6 +1,6 @@
 ---
-name: knowledge-stage
-description: "Query the Armis Knowledge base (STAGE) for organizational standards, policies, and tenant-specific guidance. Use when generating, reviewing, or remediating code so the work matches the organization's standards. Triggers: /knowledge-stage, what are our standards for, what does our org say about, search knowledge, list standards."
+name: knowledge
+description: "Query the Armis Knowledge base (PROD) for organizational standards, policies, and tenant-specific guidance. Use when generating, reviewing, or remediating code so the work matches the organization's standards. Triggers: /knowledge, what are our standards for, what does our org say about, search knowledge, list standards."
 allowed-tools:
   - Bash(security *)
   - Bash(secret-tool *)
@@ -9,10 +9,10 @@ allowed-tools:
   - Bash(source *)
 ---
 
-# /knowledge-stage
+# /knowledge
 
-Query the Armis Knowledge backend in the **stage** environment
-(`knowledge-api.moose-stg.armis.com`) directly via HTTPS — no MCP server
+Query the Armis Knowledge backend in the **prod** environment
+(`knowledge-api.moose.armis.com`) directly via HTTPS — no MCP server
 in the loop.
 
 ## Auth model
@@ -20,7 +20,7 @@ in the loop.
 - `client_id` is an env var (`ARMIS_KNOWLEDGE_CLIENT_ID`); the backend
   routes the token exchange to the right tenant by looking the
   client_id up in the global `admin.client_credentials` table.
-- `client_secret` lives in the OS keychain (service `armis-knowledge-stage`,
+- `client_secret` lives in the OS keychain (service `armis-knowledge-prod`,
   account = `$ARMIS_KNOWLEDGE_CLIENT_ID`).
 - The shared lib mints a fresh JWT on demand and caches it for ~55min in
   `$TMPDIR` with mode `600`. The user never copies a JWT.
@@ -36,7 +36,7 @@ TENANT_ID=$(ak_tenant_id)
 
 ### Search
 
-`/knowledge-stage <query>` — full-text search over enabled docs:
+`/knowledge <query>` — full-text search over enabled docs:
 
 ```bash
 ak_get /api/knowledge/search \
@@ -54,7 +54,7 @@ ak_get "/api/knowledge/$DOC_ID" --data-urlencode "tenant_id=$TENANT_ID"
 
 ### List by scope
 
-`/knowledge-stage list <scope>` — `scope` ∈ `organization`, `department`, `team`, `project`:
+`/knowledge list <scope>` — `scope` ∈ `organization`, `department`, `team`, `project`:
 
 ```bash
 ak_get /api/knowledge/by-scope \
@@ -70,8 +70,8 @@ Briefly cite which scope each applied standard came from so the user can audit.
 ## Errors
 
 - `401 invalid_client_credentials` — secret rotated. Refresh from
-  `/settings/integrations` on `knowledge.moose-stg.armis.com`, then update the
-  keychain entry: `security add-generic-password -U -s armis-knowledge-stage
+  `/settings/integrations` on `knowledge.moose.armis.com`, then update the
+  keychain entry: `security add-generic-password -U -s armis-knowledge-prod
   -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w`.
 - `401 missing_bearer_token` — env var not set. Tell the user to export
   `ARMIS_KNOWLEDGE_CLIENT_ID`.

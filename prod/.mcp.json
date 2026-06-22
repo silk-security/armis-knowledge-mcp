@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "armis-knowledge-prod": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/run.sh",
+      "env": {
+        "ARMIS_KNOWLEDGE_API_URL": "${ARMIS_KNOWLEDGE_API_URL_PROD:-https://knowledge-api.moose.armis.com}",
+        "ARMIS_KNOWLEDGE_MCP_URL": "${ARMIS_KNOWLEDGE_MCP_URL_PROD:-https://knowledge-mcp.moose.armis.com/mcp/}"
+      }
+    }
+  }
+}

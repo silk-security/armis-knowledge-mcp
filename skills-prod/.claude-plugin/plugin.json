@@ -1,0 +1,10 @@
+{
+  "name": "armis-knowledge-skills",
+  "description": "PROD environment (knowledge-api.moose.armis.com). Adds /knowledge, /cwe-fix, /framework-guidance, and /tech-guidance as shell skills that call the backend directly. Reads ARMIS_KNOWLEDGE_CLIENT_ID; loads client_secret from the OS keychain (service: armis-knowledge-prod). Tenant isolation enforced server-side; no knowledge data stored on disk.",
+  "author": {
+    "name": "Armis Security"
+  },
+  "license": "Apache-2.0",
+  "category": "development",
+  "skills": "./skills/"
+}

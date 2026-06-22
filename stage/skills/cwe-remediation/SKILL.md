@@ -1,15 +1,15 @@
 ---
-name: cwe-remediation
-description: "Fetch organization-specific remediation guidance for a given CWE from the Armis Knowledge STAGE environment. Use when fixing a vulnerability identified by CWE ID, when triaging scanner findings, or when the user asks how to remediate a specific weakness. Also surfaces false-positive patterns. Triggers: /cwe-fix, how do we fix CWE-, remediation for CWE, false positive CWE, cwe guidance."
+name: cwe-remediation-stage
+description: "Fetch organization-specific remediation guidance for a given CWE from the Armis Knowledge STAGE environment. Use when fixing a vulnerability identified by CWE ID, when triaging scanner findings, or when the user asks how to remediate a specific weakness. Also surfaces false-positive patterns. Triggers: /cwe-fix-stage, how do we fix CWE-, remediation for CWE, false positive CWE, cwe guidance."
 ---
 
-# /cwe-fix
+# /cwe-fix-stage
 
 Get tenant-specific remediation and false-positive guidance for a CWE from the **stage** environment (`knowledge-mcp.moose-stg.armis.com`).
 
 ## When to use
 
-- The user runs `/cwe-fix CWE-89` (or any CWE id) → call `mcp__armis_knowledge_stage__get_cwe_remediation("CWE-89")`.
+- The user runs `/cwe-fix-stage CWE-89` (or any CWE id) → call `mcp__armis_knowledge_stage__get_cwe_remediation("CWE-89")`.
 - The user is fixing a scanner finding tagged with a CWE → call `get_cwe_remediation` for that CWE before proposing code.
 - The user asks "is this a real CWE-XX or false positive?" → call `mcp__armis_knowledge_stage__get_cwe_fp_reduction("CWE-XX")`.
 

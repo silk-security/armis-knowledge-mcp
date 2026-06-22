@@ -1,0 +1,24 @@
+---
+name: knowledge
+description: "Query the Armis Knowledge base (PROD environment) for organizational standards, policies, and tenant-specific guidance. Use when generating, reviewing, or remediating code so the work matches the organization's standards. Triggers: /knowledge, what are our standards for, what does our org say about, search knowledge, list standards, knowledge base."
+---
+
+# /knowledge
+
+Query the Armis Knowledge base in the **prod** environment (`knowledge-mcp.moose.armis.com`). The data lives server-side; this skill routes user intent to the right MCP tool.
+
+## When to use
+
+- Writing or reviewing security-sensitive code → call `mcp__armis_knowledge_prod__list_standards("project")`, then `mcp__armis_knowledge_prod__get_cwe_remediation` for any CWE relevant to the work.
+- The user asks "what are our standards for X?" or "what does our org say about Y?" → `mcp__armis_knowledge_prod__search_knowledge(query)`.
+- The user runs `/knowledge <query>` → `mcp__armis_knowledge_prod__search_knowledge(query)`.
+- The user runs `/knowledge list <scope>` (scope ∈ org, dept, team, project) → `mcp__armis_knowledge_prod__list_standards(scope)`.
+
+## Priority
+
+When multiple standards are returned, apply them in priority order: **project > team > dept > org**. Briefly mention which standards you applied so the user can audit.
+
+## Notes
+
+- Tenant resolution is server-side; never pass a customer/tenant parameter — the bearer token determines scope.
+- If the server returns an auth error, the user's `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` env vars are missing or invalid — point them at `knowledge.moose.armis.com/settings/integrations` to issue / rotate credentials.

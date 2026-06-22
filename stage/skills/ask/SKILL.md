@@ -1,21 +1,21 @@
 ---
-name: ask
-description: "Ask a free-form question about the Armis Knowledge base (STAGE) and get a synthesized answer with citations. Use for explanatory questions about documents (\"what does X policy say?\", \"summarize our position on Y\"). Do NOT use for code generation or review — call /knowledge for those so the calling agent stays in control of how standards are applied. Triggers: /ask, /ask-knowledge, ask the knowledge base, what does our knowledge say about, summarize what we have on."
+name: ask-stage
+description: "Ask a free-form question about the Armis Knowledge base (STAGE) and get a synthesized answer with citations. Use for explanatory questions about documents (\"what does X policy say?\", \"summarize our position on Y\"). Do NOT use for code generation or review — call /knowledge-stage for those so the calling agent stays in control of how standards are applied. Triggers: /ask-stage, /ask-knowledge-stage, ask the knowledge base, what does our knowledge say about, summarize what we have on."
 ---
 
-# /ask
+# /ask-stage
 
 Ask a free-form question about the documents in the Armis Knowledge base (stage). The MCP server runs the agent loop and returns a single synthesized answer — useful when the user wants prose, not raw search hits.
 
 ## When to use
 
-- The user asks `/ask <question>` or phrases the request as Q&A: "what does our knowledge base say about X?", "summarize what we have on Y", "which document covers Z?"
+- The user asks `/ask-stage <question>` or phrases the request as Q&A: "what does our knowledge base say about X?", "summarize what we have on Y", "which document covers Z?"
 - → Call `mcp__armis_knowledge_stage__ask_knowledge(question)`.
 
 ## When NOT to use
 
-- For code generation or review, prefer `/knowledge` and the lower-level tools (`search_knowledge`, `get_cwe_remediation`, `list_standards`). They keep the calling agent in control of which standards apply, in what priority order, and how they shape the output.
-- For a specific CWE, framework, or technology lookup, use the dedicated skill — `/cwe-fix`, `/framework-guidance`, `/tech-guidance`.
+- For code generation or review, prefer `/knowledge-stage` and the lower-level tools (`search_knowledge`, `get_cwe_remediation`, `list_standards`). They keep the calling agent in control of which standards apply, in what priority order, and how they shape the output.
+- For a specific CWE, framework, or technology lookup, use the dedicated skill — `/cwe-fix-stage`, `/framework-guidance-stage`, `/tech-guidance-stage`.
 
 ## Output
 

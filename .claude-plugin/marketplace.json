@@ -5,10 +5,24 @@
   },
   "metadata": {
     "description": "Query the Armis Knowledge base — organizational standards, CWE remediation, framework and technology guidance — directly from your coding agent. Ships an MCP variant (works with Claude Code, Claude Desktop, Cursor, etc.) and a Claude-Code-only shell-skills variant (no MCP runtime, OS keychain auth) for each environment. Pick one variant per environment — both variants register the same slash commands, so installing both simultaneously will collide.",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "pluginRoot": ".."
   },
   "plugins": [
+    {
+      "name": "armis-knowledge",
+      "description": "MCP variant, PROD environment (knowledge-mcp.moose.armis.com). Adds /knowledge, /ask, /cwe-fix, /framework-guidance, and /tech-guidance. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk.",
+      "source": "./prod/",
+      "license": "Apache-2.0",
+      "category": "development"
+    },
+    {
+      "name": "armis-knowledge-stage",
+      "description": "MCP variant, STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge-stage, /ask-stage, /cwe-fix-stage, /framework-guidance-stage, and /tech-guidance-stage. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk.",
+      "source": "./stage/",
+      "license": "Apache-2.0",
+      "category": "development"
+    },
     {
       "name": "armis-knowledge-dev",
       "description": "MCP variant, DEV environment (knowledge-mcp.moose-dev.armis.com). Adds /knowledge-dev, /ask-dev, /cwe-fix-dev, /framework-guidance-dev, and /tech-guidance-dev. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk.",
@@ -17,9 +31,16 @@
       "category": "development"
     },
     {
-      "name": "armis-knowledge-stage",
-      "description": "MCP variant, STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge, /ask, /cwe-fix, /framework-guidance, and /tech-guidance. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk.",
-      "source": "./stage/",
+      "name": "armis-knowledge-skills",
+      "description": "Shell-skills variant, PROD environment (knowledge-api.moose.armis.com). Same /knowledge, /cwe-fix, /framework-guidance, /tech-guidance commands as the MCP variant, but implemented as pure shell skills that hit the REST API directly via curl — no MCP runtime, no Python install. Reads ARMIS_KNOWLEDGE_CLIENT_ID; loads client_secret from the OS keychain (service: armis-knowledge-prod). Claude Code only. Don't install alongside armis-knowledge — same slash commands.",
+      "source": "./skills-prod/",
+      "license": "Apache-2.0",
+      "category": "development"
+    },
+    {
+      "name": "armis-knowledge-skills-stage",
+      "description": "Shell-skills variant, STAGE environment (knowledge-api.moose-stg.armis.com). Same /knowledge-stage, /cwe-fix-stage, /framework-guidance-stage, /tech-guidance-stage commands as the MCP variant, but implemented as pure shell skills that hit the REST API directly via curl — no MCP runtime, no Python install. Reads ARMIS_KNOWLEDGE_CLIENT_ID; loads client_secret from the OS keychain (service: armis-knowledge-stage). Claude Code only. Don't install alongside armis-knowledge-stage — same slash commands.",
+      "source": "./skills-stage/",
       "license": "Apache-2.0",
       "category": "development"
     },
@@ -27,13 +48,6 @@
       "name": "armis-knowledge-skills-dev",
       "description": "Shell-skills variant, DEV environment (knowledge-api.moose-dev.armis.com). Same /knowledge-dev, /cwe-fix-dev, /framework-guidance-dev, /tech-guidance-dev commands as the MCP variant, but implemented as pure shell skills that hit the REST API directly via curl — no MCP runtime, no Python install. Reads ARMIS_KNOWLEDGE_CLIENT_ID; loads client_secret from the OS keychain (service: armis-knowledge-dev). Claude Code only. Don't install alongside armis-knowledge-dev — same slash commands.",
       "source": "./skills-dev/",
-      "license": "Apache-2.0",
-      "category": "development"
-    },
-    {
-      "name": "armis-knowledge-skills-stage",
-      "description": "Shell-skills variant, STAGE environment (knowledge-api.moose-stg.armis.com). Same /knowledge, /cwe-fix, /framework-guidance, /tech-guidance commands as the MCP variant, but implemented as pure shell skills that hit the REST API directly via curl — no MCP runtime, no Python install. Reads ARMIS_KNOWLEDGE_CLIENT_ID; loads client_secret from the OS keychain (service: armis-knowledge-stage). Claude Code only. Don't install alongside armis-knowledge-stage — same slash commands.",
-      "source": "./skills-stage/",
       "license": "Apache-2.0",
       "category": "development"
     }

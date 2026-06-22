@@ -6,19 +6,21 @@ Pick the variant that fits your tooling; don't install both for the same
 environment because they register the same slash commands.
 
 > **Already installed?** [USAGE.md](USAGE.md) is the operator cheat sheet for
-> the four slash commands and the triggers that fire each skill on its own.
+> the slash commands and the triggers that fire each skill on its own.
 
-> **Use the `-stage` plugins.** Stage runs on `moose-stg.armis.com` and is
-> the env everyone hits today. The `-dev` plugins are for maintainers
-> only — they point at `moose-dev.armis.com`, which is not multi-user. A
-> `-prod` variant will be added once MooseProd is live.
+> **Use the `-prod` plugins.** Prod runs on `moose.armis.com` and is the env
+> everyone uses today. The bare slash commands (`/knowledge`, `/cwe-fix`, …)
+> belong to prod. Stage and dev each ship suffixed commands so they can be
+> installed side-by-side without colliding with prod.
 
 | Plugin | Variant | Backend | Slash commands |
 |---|---|---|---|
-| `armis-knowledge-stage` | MCP | `knowledge-mcp.moose-stg.armis.com` | `/knowledge`, `/cwe-fix`, `/framework-guidance`, `/tech-guidance` |
-| `armis-knowledge-skills-stage` | shell-skills | `knowledge-api.moose-stg.armis.com` | same as MCP stage variant |
-| `armis-knowledge-dev` | MCP (maintainers) | `knowledge-mcp.moose-dev.armis.com` | `/knowledge-dev`, `/cwe-fix-dev`, `/framework-guidance-dev`, `/tech-guidance-dev` |
-| `armis-knowledge-skills-dev` | shell-skills (maintainers) | `knowledge-api.moose-dev.armis.com` | same as MCP dev variant |
+| `armis-knowledge-prod` | MCP | `knowledge-mcp.moose.armis.com` | `/knowledge`, `/ask`, `/cwe-fix`, `/framework-guidance`, `/tech-guidance` |
+| `armis-knowledge-skills-prod` | shell-skills | `knowledge-api.moose.armis.com` | same commands minus `/ask` (skills variant has no agentic Q&A) |
+| `armis-knowledge-stage` | MCP | `knowledge-mcp.moose-stg.armis.com` | `/knowledge-stage`, `/ask-stage`, `/cwe-fix-stage`, `/framework-guidance-stage`, `/tech-guidance-stage` |
+| `armis-knowledge-skills-stage` | shell-skills | `knowledge-api.moose-stg.armis.com` | same commands minus `/ask-stage` |
+| `armis-knowledge-dev` | MCP (maintainers) | `knowledge-mcp.moose-dev.armis.com` | `/knowledge-dev`, `/ask-dev`, `/cwe-fix-dev`, `/framework-guidance-dev`, `/tech-guidance-dev` |
+| `armis-knowledge-skills-dev` | shell-skills (maintainers) | `knowledge-api.moose-dev.armis.com` | same commands minus `/ask-dev` |
 
 ## Which variant?
 
@@ -55,28 +57,26 @@ for the original MCP-vs-skill split.
 This bundle contains **no knowledge data**. The data lives server-side
 (per-tenant, in S3) and is queried over HTTPS with the user's bearer token.
 
-> **Prod note:** there is no prod variant yet. Stage on `moose-stg` is what
-> everyone uses today. A prod variant will be added the same way once
-> MooseProd is up.
-
 ## Layout
 
 ```
 plugin/
-├── .claude-plugin/marketplace.json   manifest listing all four plugins
-├── dev/                              MCP variant, dev
-│   ├── .mcp.json                     server: armis-knowledge-dev → moose-dev
+├── .claude-plugin/marketplace.json   manifest listing all six plugins
+├── prod/                             MCP variant, prod (bare slash commands)
+│   ├── .mcp.json                     server: armis-knowledge-prod → moose
 │   ├── auth.py                       JWT exchange + cache + refresh
 │   ├── bridge.py                     stdio↔streamable-HTTP MCP proxy
 │   ├── run.sh                        venv bootstrap + entrypoint
 │   ├── requirements.txt              mcp, httpx, anyio
 │   └── skills/                       SKILL.md files routing to MCP tools
-├── stage/                            MCP variant, stage (mirror of dev/)
-├── skills-dev/                       shell-skills variant, dev
+├── stage/                            MCP variant, stage (mirror of prod/, -stage commands)
+├── dev/                              MCP variant, dev (mirror of prod/, -dev commands)
+├── skills-prod/                      shell-skills variant, prod
 │   ├── .claude-plugin/plugin.json
 │   ├── lib/armis-knowledge.sh        JWT mint + ak_get / ak_post helpers
 │   └── skills/                       SKILL.md files calling ak_get directly
-├── skills-stage/                     shell-skills variant, stage (mirror of skills-dev/)
+├── skills-stage/                     shell-skills variant, stage (mirror of skills-prod/)
+├── skills-dev/                       shell-skills variant, dev (mirror of skills-prod/)
 └── README.md
 ```
 
@@ -98,15 +98,17 @@ clients, install the MCP variant. For Claude-Code-only setups where you'd
 rather skip the Python venv, install the shell-skills variant:
 
 ```
-# MCP variant
-/plugin install armis-knowledge-stage@armis-knowledge
+# MCP variant (prod)
+/plugin install armis-knowledge-prod@armis-knowledge
 
 # OR shell-skills variant (Claude Code only)
-/plugin install armis-knowledge-skills-stage@armis-knowledge
+/plugin install armis-knowledge-skills-prod@armis-knowledge
 ```
 
-Maintainers pointing at the dev backend swap `-stage` → `-dev` in the
-plugin name above.
+Maintainers pointing at stage or dev swap `-prod` → `-stage` / `-dev` in the
+plugin name above. Stage and dev installs use suffixed slash commands
+(`/knowledge-stage`, `/knowledge-dev`) so they don't collide with a prod
+install on the same machine.
 
 Both URLs serve the same content — every push to `main` of this repo
 publishes to both. New installs should use the `ArmisSecurity` URL.
@@ -135,13 +137,14 @@ export ARMIS_KNOWLEDGE_CLIENT_ID='<your-id>'
 
 # Store the secret once in the OS keychain (don't put it in your shell rc):
 # macOS:
-security add-generic-password -s armis-knowledge-stage -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w
+security add-generic-password -s armis-knowledge-prod -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w
 # Linux:
-secret-tool store --label='Armis Knowledge stage' service armis-knowledge-stage account "$ARMIS_KNOWLEDGE_CLIENT_ID"
+secret-tool store --label='Armis Knowledge prod' service armis-knowledge-prod account "$ARMIS_KNOWLEDGE_CLIENT_ID"
 ```
 
-Maintainers using the dev variant: keychain service is `armis-knowledge-dev`
-instead of `armis-knowledge-stage`.
+Maintainers using the stage or dev variant: swap `armis-knowledge-prod` →
+`armis-knowledge-stage` / `armis-knowledge-dev` in the keychain service
+name above.
 
 ## Publishing
 
@@ -165,5 +168,5 @@ local path:
 
 ```
 /plugin marketplace add /Users/<you>/work/armis/armis-knowledge/apps/mcp/plugin
-/plugin install armis-knowledge-stage@armis-knowledge
+/plugin install armis-knowledge-prod@armis-knowledge
 ```
