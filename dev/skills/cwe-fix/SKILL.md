@@ -1,5 +1,5 @@
 ---
-name: cwe-remediation-dev
+name: cwe-fix-dev
 description: "Fetch organization-specific remediation guidance for a given CWE from the Armis Knowledge DEV environment. Use when fixing a vulnerability identified by CWE ID, when triaging scanner findings, or when the user asks how to remediate a specific weakness. Also surfaces false-positive patterns. Triggers: /cwe-fix-dev, how do we fix CWE-, remediation for CWE, false positive CWE, cwe guidance."
 ---
 

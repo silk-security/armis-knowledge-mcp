@@ -1,10 +1,10 @@
 # Using Armis Knowledge from your coding agent
 
-Once installed, the plugin gives your agent four slash commands and four skills
-that wrap the same backend. The slash command is what *you* type; the skill
-description is what your agent reads to decide when to call it on its own.
-This page is the operator's cheat sheet — what to type, when each command
-fires, and what comes back.
+Once installed, the plugin gives your agent five slash commands and five
+skills that wrap the same backend (the `/ask` skill is MCP-variant only).
+The slash command is what *you* type; the skill description is what your
+agent reads to decide when to call it on its own. This page is the operator's
+cheat sheet — what to type, when each command fires, and what comes back.
 
 For install + auth setup, see [README.md](README.md). The prod variants
 register the unsuffixed commands below. Stage and dev variants register the
@@ -34,10 +34,10 @@ the agent watches for. The intended firing pattern, by skill:
   does our org say about Y?", or whenever the agent is about to write or
   review security-sensitive code. The agent should `list project` first to
   pull project-scope standards, then search for anything not covered.
-- **cwe-remediation** — fires when a CWE id appears in the conversation
-  ("how do we fix CWE-89?", "is this a real CWE-79?"), or when the agent is
-  triaging scanner findings. Surfaces both fix guidance and known
-  false-positive patterns.
+- **cwe-fix** — fires when a CWE id appears in the conversation ("how do we
+  fix CWE-89?", "is this a real CWE-79?"), or when the agent is triaging
+  scanner findings. Surfaces both fix guidance and known false-positive
+  patterns.
 - **framework-guidance** — fires when the agent is generating or reviewing
   code that uses a known web framework (Django, Flask, FastAPI, Express,
   Rails, Spring, …). "How do we use Django here?" is the canonical phrasing.
