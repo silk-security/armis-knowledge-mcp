@@ -170,13 +170,190 @@ async def _run_bridge() -> None:
                 tg.start_soon(_pump, upstream_read, client_write, "upstream→client")
 
 
-def main() -> None:
-    logging.basicConfig(
-        level=os.environ.get("LOG_LEVEL", "INFO"),
-        # stdout is the MCP wire — log to stderr only.
-        stream=sys.stderr,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+def _configure_logging() -> None:
+    """Wire stderr (always) + an optional file handler.
+
+    KNOWLEDGE_MCP_BRIDGE_LOG, if set, names a path to also tee log lines
+    to. Useful when Claude Code is launching the bridge and the user
+    can't see stderr — pair with `LOG_LEVEL=DEBUG` to capture the JWT
+    exchange URL, response status, exp, and 401-retry hits.
+
+    Failures opening the log file are non-fatal: print one warning to
+    stderr and continue with stderr-only logging. We never want a typo'd
+    log path to take the bridge down.
+    """
+    level = os.environ.get("LOG_LEVEL", "INFO")
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+
+    # stdout is the MCP wire — never log there.
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setFormatter(formatter)
+
+    handlers: list[logging.Handler] = [stderr_handler]
+
+    log_path = os.environ.get("KNOWLEDGE_MCP_BRIDGE_LOG")
+    if log_path:
+        try:
+            file_handler = logging.FileHandler(log_path, mode="a", encoding="utf-8")
+            file_handler.setFormatter(formatter)
+            handlers.append(file_handler)
+        except OSError as e:
+            print(
+                f"warning: could not open KNOWLEDGE_MCP_BRIDGE_LOG={log_path!r}: {e}",
+                file=sys.stderr,
+            )
+
+    logging.basicConfig(level=level, handlers=handlers, force=True)
+    if log_path and len(handlers) > 1:
+        logger.info("file logging enabled at %s (level=%s)", log_path, level)
+
+
+def _diagnose() -> int:
+    """Self-test: exercise env, /auth/token, and /mcp/ then print a verdict.
+
+    Returns 0 if everything's wired correctly, 1 otherwise. Output is
+    intended for an interactive terminal — it's safe to print to stdout
+    here because the caller passed --diagnose and is not speaking
+    JSON-RPC over the pipe.
+    """
+    out = sys.stdout
+
+    def _say(label: str, status: str, detail: str = "") -> None:
+        sigil = {"ok": "[ ok ]", "warn": "[warn]", "fail": "[fail]"}.get(status, "[ ?? ]")
+        line = f"{sigil} {label}"
+        if detail:
+            line += f" — {detail}"
+        print(line, file=out)
+
+    # --- step 1: env vars ---
+    api_url_env = os.environ.get("ARMIS_KNOWLEDGE_API_URL")
+    mcp_url_env = os.environ.get("ARMIS_KNOWLEDGE_MCP_URL")
+    cid_env = (
+        os.environ.get("ARMIS_KNOWLEDGE_CLIENT_ID")
+        or os.environ.get("ARMIS_CLIENT_ID")
     )
+    sec_env = (
+        os.environ.get("ARMIS_KNOWLEDGE_CLIENT_SECRET")
+        or os.environ.get("ARMIS_CLIENT_SECRET")
+    )
+
+    print(f"plugin root:    {_plugin_root}", file=out)
+    print(f".env file:      {_env_file} ({'present' if _env_file.is_file() else 'absent'})", file=out)
+    print(f"api url:        {api_url_env or _DEFAULT_API_URL}", file=out)
+    print(f"mcp url:        {mcp_url_env or _DEFAULT_MCP_URL}", file=out)
+    print(f"client id:      {cid_env or '(missing)'}", file=out)
+    print(f"client secret:  {'set (' + str(len(sec_env)) + ' chars)' if sec_env else '(missing)'}", file=out)
+    print("", file=out)
+
+    if not cid_env or not sec_env:
+        _say("env", "fail", "ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET must both be set")
+        return 1
+    _say("env", "ok")
+
+    # --- step 2: token exchange ---
+    try:
+        api_url, mcp_url, client_id = _resolve_config()
+    except RuntimeError as e:
+        _say("config", "fail", str(e))
+        return 1
+
+    jwt_auth = JWTAuth(api_url=api_url, client_id=client_id)
+    try:
+        jwt_auth.exchange()
+    except RuntimeError as e:
+        _say("token exchange", "fail", str(e))
+        return 1
+
+    token = jwt_auth.get_token()
+    claims = _decode_jwt_payload_unverified(token)
+    exp_in = claims.get("exp", 0) - int(__import__("time").time())
+    claim_summary = ", ".join(
+        f"{k}={claims[k]}" for k in ("sub", "tenant", "kind", "role") if k in claims
+    )
+    _say(
+        "token exchange",
+        "ok",
+        f"alg={_jwt_alg(token)}, exp in {exp_in}s, claims: {claim_summary or '(none)'}",
+    )
+
+    # --- step 3: /mcp/ round-trip ---
+    headers = {
+        "authorization": f"Bearer {token}",
+        "accept": "application/json, text/event-stream",
+        "content-type": "application/json",
+    }
+    initialize_payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {},
+            "clientInfo": {"name": "knowledge-mcp-diagnose", "version": "1.0"},
+        },
+    }
+    try:
+        resp = httpx.post(mcp_url, headers=headers, json=initialize_payload, timeout=15.0)
+    except httpx.HTTPError as e:
+        _say("mcp connect", "fail", f"{type(e).__name__}: {e}")
+        return 1
+
+    if resp.status_code == 401:
+        _say(
+            "mcp /mcp/",
+            "fail",
+            "401 — the MCP rejected our token. Check JWT_PUBLIC_KEY/aud/iss on the MCP service.",
+        )
+        return 1
+    if resp.status_code >= 400:
+        body = resp.text.strip()[:200]
+        _say("mcp /mcp/", "fail", f"HTTP {resp.status_code}: {body or '<empty body>'}")
+        return 1
+
+    _say(
+        "mcp /mcp/",
+        "ok",
+        f"HTTP {resp.status_code}, session={resp.headers.get('mcp-session-id', '(none)')}",
+    )
+    print("", file=out)
+    print("All checks passed. Bridge auth is healthy.", file=out)
+    return 0
+
+
+def _decode_jwt_payload_unverified(token: str) -> dict:
+    """Decode the payload of a JWT without verifying — diagnostics only."""
+    import base64
+    import json as _json
+
+    parts = token.split(".")
+    if len(parts) != 3:
+        return {}
+    payload_b64 = parts[1] + "=" * (-len(parts[1]) % 4)
+    try:
+        return _json.loads(base64.urlsafe_b64decode(payload_b64))
+    except (ValueError, _json.JSONDecodeError):
+        return {}
+
+
+def _jwt_alg(token: str) -> str:
+    import base64
+    import json as _json
+
+    parts = token.split(".")
+    if len(parts) != 3:
+        return "?"
+    header_b64 = parts[0] + "=" * (-len(parts[0]) % 4)
+    try:
+        header = _json.loads(base64.urlsafe_b64decode(header_b64))
+        return header.get("alg", "?")
+    except (ValueError, _json.JSONDecodeError):
+        return "?"
+
+
+def main() -> None:
+    _configure_logging()
+    if "--diagnose" in sys.argv[1:]:
+        sys.exit(_diagnose())
     try:
         anyio.run(_run_bridge)
     except RuntimeError as e:

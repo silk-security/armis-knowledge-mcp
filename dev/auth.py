@@ -27,6 +27,26 @@ logger = logging.getLogger("knowledge-mcp-bridge")
 
 _REFRESH_BUFFER_SECONDS = 300
 _LOCALHOST_HOSTS = {"localhost", "127.0.0.1", "::1"}
+_RESPONSE_BODY_LOG_LIMIT = 200
+
+
+def _safe_response_text(response: httpx.Response) -> str:
+    """Best-effort decode of an httpx response body for logging.
+
+    httpx may raise if the body wasn't consumed (streaming) or if decoding
+    fails — in that case we return an empty string rather than crash the
+    error path.
+    """
+    try:
+        return response.text.strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _truncate_for_log(text: str, limit: int = _RESPONSE_BODY_LOG_LIMIT) -> str:
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "..."
 
 
 class JWTAuth:
@@ -74,11 +94,17 @@ class JWTAuth:
             response = httpx.post(url, json=payload, timeout=30.0)
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
+            # armis:ignore cwe:532 reason: /auth/token error responses are FastAPI {"detail": "..."} strings (e.g. "invalid_client_credentials"); the request payload is local to this stack frame and never reaches the response body
+            body = _truncate_for_log(_safe_response_text(e.response))
+            suffix = f" — body: {body}" if body else ""
             if e.response.status_code == 401:
                 raise RuntimeError(
-                    "Authentication failed: invalid client_id/client_secret"
+                    f"Authentication failed: invalid client_id/client_secret"
+                    f" (HTTP 401){suffix}"
                 ) from e
-            raise RuntimeError(f"Authentication failed: HTTP {e.response.status_code}") from e
+            raise RuntimeError(
+                f"Authentication failed: HTTP {e.response.status_code}{suffix}"
+            ) from e
         except httpx.TimeoutException as e:
             raise RuntimeError("Authentication failed: connection timeout") from e
         except Exception as e:

@@ -48,4 +48,4 @@ fi
 # plugin dir before checking, which the shell can't see without parsing the
 # file itself. Missing creds surface as a one-line RuntimeError on stderr.
 
-exec "$VENV_DIR/bin/python" "$PLUGIN_DIR/bridge.py"
+exec "$VENV_DIR/bin/python" "$PLUGIN_DIR/bridge.py" "$@"
