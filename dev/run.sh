@@ -44,15 +44,8 @@ if [ "$NEEDS_INSTALL" -eq 1 ]; then
     fi
 fi
 
-# Pre-flight: surface missing creds before booting Python so the error
-# isn't buried in a JSON-RPC initialization failure.
-MISSING=""
-[ -z "${ARMIS_CLIENT_ID:-}" ]     && MISSING="ARMIS_CLIENT_ID"
-[ -z "${ARMIS_CLIENT_SECRET:-}" ] && MISSING="${MISSING:+$MISSING, }ARMIS_CLIENT_SECRET"
-if [ -n "$MISSING" ]; then
-    echo "ERROR: missing required environment variable(s): $MISSING" >&2
-    echo "  Set these in your shell rc / IDE env so the MCP bridge can authenticate." >&2
-    exit 1
-fi
+# Credential validation happens in Python — bridge.py loads .env from the
+# plugin dir before checking, which the shell can't see without parsing the
+# file itself. Missing creds surface as a one-line RuntimeError on stderr.
 
 exec "$VENV_DIR/bin/python" "$PLUGIN_DIR/bridge.py"

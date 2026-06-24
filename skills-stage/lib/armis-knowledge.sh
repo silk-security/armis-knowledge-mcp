@@ -3,51 +3,53 @@
 # Sourced by every SKILL.md. Sets `ak_*` functions that mint JWTs from the
 # user's stored client_id/client_secret and call the backend API.
 #
-# Required env (set once per machine, e.g. in ~/.zshrc):
-#   ARMIS_KNOWLEDGE_CLIENT_ID
+# Documented credentials: ARMIS_CLIENT_ID / ARMIS_CLIENT_SECRET (env).
 #
 # Optional env:
 #   ARMIS_KNOWLEDGE_API   override backend URL (default: stage)
-#
-# The client_secret lives in the OS keychain, NOT a shell rc:
-#   macOS:  security add-generic-password -s armis-knowledge-stage -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w
-#   Linux:  secret-tool store --label='Armis Knowledge stage' service armis-knowledge-stage account "$ARMIS_KNOWLEDGE_CLIENT_ID"
 
 set -euo pipefail
 
 ARMIS_KNOWLEDGE_ENV="${ARMIS_KNOWLEDGE_ENV:-stage}"
 ARMIS_KNOWLEDGE_API="${ARMIS_KNOWLEDGE_API:-https://knowledge-api.moose-stg.armis.com}"
 
-: "${ARMIS_KNOWLEDGE_CLIENT_ID:?set ARMIS_KNOWLEDGE_CLIENT_ID; copy from /settings/integrations on the knowledge webapp}"
+# Load $CLAUDE_PLUGIN_ROOT/.env, but only fill in vars not already set in
+# the shell — same precedence as python-dotenv's override=False on the MCP
+# side. Done before resolving creds so .env can supply either prefixed or
+# bare names.
+if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" && -f "$CLAUDE_PLUGIN_ROOT/.env" ]]; then
+  while IFS='=' read -r _ak_key _ak_val; do
+    [[ -z $_ak_key || ${_ak_key:0:1} == '#' ]] && continue
+    _ak_key="${_ak_key#export }"
+    _ak_key="${_ak_key// /}"
+    _ak_val="${_ak_val%\"}"; _ak_val="${_ak_val#\"}"
+    _ak_val="${_ak_val%\'}"; _ak_val="${_ak_val#\'}"
+    [[ -z ${!_ak_key:-} ]] && export "$_ak_key=$_ak_val"
+  done < "$CLAUDE_PLUGIN_ROOT/.env"
+  unset _ak_key _ak_val
+fi
+
+# Resolve creds: knowledge-specific override wins over the shared default.
+_ak_client_id="${ARMIS_KNOWLEDGE_CLIENT_ID:-${ARMIS_CLIENT_ID:-}}"
+_ak_client_secret="${ARMIS_KNOWLEDGE_CLIENT_SECRET:-${ARMIS_CLIENT_SECRET:-}}"
+
+if [[ -z $_ak_client_id ]]; then
+  echo "set ARMIS_CLIENT_ID; copy from /settings/integrations on the knowledge webapp" >&2
+  return 1 2>/dev/null || exit 1
+fi
+if [[ -z $_ak_client_secret ]]; then
+  echo "set ARMIS_CLIENT_SECRET; copy from /settings/integrations on the knowledge webapp" >&2
+  return 1 2>/dev/null || exit 1
+fi
 
 for _bin in curl jq; do
   command -v "$_bin" >/dev/null || { echo "missing required binary: $_bin" >&2; return 1 2>/dev/null || exit 1; }
 done
 
-_ak_keychain_service="armis-knowledge-${ARMIS_KNOWLEDGE_ENV}"
-_ak_token_cache="${TMPDIR:-/tmp}/${_ak_keychain_service}.${ARMIS_KNOWLEDGE_CLIENT_ID}.jwt"
+_ak_token_cache="${TMPDIR:-/tmp}/armis-knowledge-${ARMIS_KNOWLEDGE_ENV}.${_ak_client_id}.jwt"
 
 _ak_mtime() {
   stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null
-}
-
-_ak_load_secret() {
-  if command -v security >/dev/null; then
-    security find-generic-password -s "$_ak_keychain_service" -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w 2>/dev/null && return
-  fi
-  if command -v secret-tool >/dev/null; then
-    secret-tool lookup service "$_ak_keychain_service" account "$ARMIS_KNOWLEDGE_CLIENT_ID" 2>/dev/null && return
-  fi
-  cat <<EOF >&2
-no client_secret found in keychain for service=$_ak_keychain_service account=$ARMIS_KNOWLEDGE_CLIENT_ID
-
-Store it once:
-  macOS:  security add-generic-password -s $_ak_keychain_service -a "\$ARMIS_KNOWLEDGE_CLIENT_ID" -w
-  Linux:  secret-tool store --label='Armis Knowledge $ARMIS_KNOWLEDGE_ENV' service $_ak_keychain_service account "\$ARMIS_KNOWLEDGE_CLIENT_ID"
-
-Get the secret from /settings/integrations on the knowledge webapp.
-EOF
-  return 1
 }
 
 # Mint or return a cached JWT. Tokens TTL 1h server-side; we refresh at 55m
@@ -59,10 +61,9 @@ ak_token() {
       cat "$_ak_token_cache"; return
     fi
   fi
-  local secret; secret=$(_ak_load_secret) || return 1
   local body; body=$(jq -nc \
-    --arg id "$ARMIS_KNOWLEDGE_CLIENT_ID" \
-    --arg s "$secret" \
+    --arg id "$_ak_client_id" \
+    --arg s "$_ak_client_secret" \
     '{client_id:$id,client_secret:$s}')
   # mktemp gives an unpredictable path with mode 600, so a local attacker
   # can't pre-create a symlink at the response path and divert curl's

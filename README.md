@@ -30,13 +30,12 @@ environment because they register the same slash commands.
   `ARMIS_CLIENT_SECRET` from env.
 - **Shell-skills variant** — Claude Code only. No MCP runtime, no Python
   install — pure shell skills that hit the REST API directly via `curl`.
-  Reads `ARMIS_KNOWLEDGE_CLIENT_ID` from env; loads `client_secret` from
-  the OS keychain (`security` on macOS, `secret-tool` on Linux), so the
-  secret never lives in a shell rc.
+  Reads `ARMIS_CLIENT_ID` / `ARMIS_CLIENT_SECRET` from env (same as the
+  MCP variant and `armis-appsec`).
 
-Tool reach favors the MCP variant; install simplicity and tighter
-secret-storage favor the shell variant. See [ADR 0003](../../../docs/adr/0003-mcp-vs-skill.md)
-for the original MCP-vs-skill split.
+Tool reach favors the MCP variant; install simplicity favors the shell
+variant. See [ADR 0003](../../../docs/adr/0003-mcp-vs-skill.md) for the
+original MCP-vs-skill split.
 
 ## How both variants share the wire
 
@@ -120,7 +119,7 @@ publishes to both. New installs should use the `ArmisSecurity` URL.
 > intentional and harmless — `marketplace add <repo-url>` doesn't care
 > what the marketplace itself is named.
 
-### MCP variant — env
+### Credentials (both variants)
 
 ```bash
 export ARMIS_CLIENT_ID='<your-id>'
@@ -128,23 +127,8 @@ export ARMIS_CLIENT_SECRET='<your-secret>'
 ```
 
 The backend resolves your tenant from `client_id` server-side — there's
-no separate tenant identifier to set.
-
-### Shell-skills variant — env + keychain
-
-```bash
-export ARMIS_KNOWLEDGE_CLIENT_ID='<your-id>'
-
-# Store the secret once in the OS keychain (don't put it in your shell rc):
-# macOS:
-security add-generic-password -s armis-knowledge-prod -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w
-# Linux:
-secret-tool store --label='Armis Knowledge prod' service armis-knowledge-prod account "$ARMIS_KNOWLEDGE_CLIENT_ID"
-```
-
-Maintainers using the stage or dev variant: swap `armis-knowledge-prod` →
-`armis-knowledge-stage` / `armis-knowledge-dev` in the keychain service
-name above.
+no separate tenant identifier to set. The same env vars are used by
+`armis-appsec`, so a single export covers both.
 
 ## Publishing
 

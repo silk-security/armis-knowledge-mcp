@@ -175,10 +175,10 @@ claude --debug "use the armis-knowledge tool to list standards in scope project"
   may not match the skill descriptions. The triggers above are the ones
   baked into each skill's frontmatter.
 - **`401 invalid_client_credentials`** — the secret was rotated. Re-issue
-  from the webapp's `/settings/integrations` page and update the keychain
-  entry (shell-skills variant) or env (MCP variant).
-- **`401 missing_bearer_token`** — env vars not exported. See README.md for
-  the exact var names per variant.
+  from the webapp's `/settings/integrations` page and re-export
+  `ARMIS_CLIENT_SECRET`.
+- **`401 missing_bearer_token`** — env vars not exported. Set
+  `ARMIS_CLIENT_ID` and `ARMIS_CLIENT_SECRET` in your shell rc.
 - **`404 tenant_not_found`** — slug typo, or the tenant isn't provisioned in
   that environment. Prod, stage, and dev are separate; a slug that works in
   one may not exist in another.

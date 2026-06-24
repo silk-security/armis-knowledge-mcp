@@ -55,7 +55,13 @@ class JWTAuth:
 
         # Read secret on each exchange so it isn't pinned in process memory
         # for the lifetime of the bridge. Same pattern as armis-appsec-mcp.
-        client_secret = os.environ.get("ARMIS_CLIENT_SECRET", "")
+        # Prefixed name wins over the shared default so per-service overrides
+        # work; same precedence as bridge._resolve_config.
+        client_secret = (
+            os.environ.get("ARMIS_KNOWLEDGE_CLIENT_SECRET")
+            or os.environ.get("ARMIS_CLIENT_SECRET")
+            or ""
+        )
         if not client_secret:
             raise RuntimeError("ARMIS_CLIENT_SECRET is not set in environment.")
 

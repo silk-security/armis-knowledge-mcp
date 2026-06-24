@@ -2,8 +2,6 @@
 name: framework-guidance-stage
 description: "Fetch organization-specific guidance for a web framework (Django, Flask, FastAPI, Express, Rails, Spring, etc.) from the Armis Knowledge STAGE environment. Use when generating or reviewing code that uses a specific framework. Triggers: /framework-guidance-stage, how do we use Django, Flask conventions, our patterns for Express, framework standards."
 allowed-tools:
-  - Bash(security *)
-  - Bash(secret-tool *)
   - Bash(curl *)
   - Bash(jq *)
   - Bash(source *)

@@ -2,8 +2,6 @@
 name: knowledge
 description: "Query the Armis Knowledge base (PROD) for organizational standards, policies, and tenant-specific guidance. Use when generating, reviewing, or remediating code so the work matches the organization's standards. Triggers: /knowledge, what are our standards for, what does our org say about, search knowledge, list standards."
 allowed-tools:
-  - Bash(security *)
-  - Bash(secret-tool *)
   - Bash(curl *)
   - Bash(jq *)
   - Bash(source *)
@@ -17,11 +15,9 @@ in the loop.
 
 ## Auth model
 
-- `client_id` is an env var (`ARMIS_KNOWLEDGE_CLIENT_ID`); the backend
-  routes the token exchange to the right tenant by looking the
-  client_id up in the global `admin.client_credentials` table.
-- `client_secret` lives in the OS keychain (service `armis-knowledge-prod`,
-  account = `$ARMIS_KNOWLEDGE_CLIENT_ID`).
+- `ARMIS_CLIENT_ID` and `ARMIS_CLIENT_SECRET` are env vars (set in your
+  shell rc); the backend routes the token exchange to the right tenant by
+  looking the client_id up in the global `admin.client_credentials` table.
 - The shared lib mints a fresh JWT on demand and caches it for ~55min in
   `$TMPDIR` with mode `600`. The user never copies a JWT.
 
@@ -70,10 +66,9 @@ Briefly cite which scope each applied standard came from so the user can audit.
 ## Errors
 
 - `401 invalid_client_credentials` — secret rotated. Refresh from
-  `/settings/integrations` on `knowledge.moose.armis.com`, then update the
-  keychain entry: `security add-generic-password -U -s armis-knowledge-prod
-  -a "$ARMIS_KNOWLEDGE_CLIENT_ID" -w`.
-- `401 missing_bearer_token` — env var not set. Tell the user to export
-  `ARMIS_KNOWLEDGE_CLIENT_ID`.
+  `/settings/integrations` on `knowledge.moose.armis.com` and re-export
+  `ARMIS_CLIENT_SECRET`.
+- `401 missing_bearer_token` — env vars not set. Tell the user to export
+  `ARMIS_CLIENT_ID` and `ARMIS_CLIENT_SECRET`.
 - `401 invalid_client_credentials` — client_id has no admin routing row
   (no tenant claims this credential), or secret didn't bcrypt-verify.

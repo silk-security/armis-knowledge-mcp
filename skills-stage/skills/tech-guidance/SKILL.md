@@ -2,8 +2,6 @@
 name: tech-guidance-stage
 description: "Fetch organization-specific guidance for a programming language or runtime (Python, Go, TypeScript, Java, Rust, Node, etc.) from the Armis Knowledge STAGE environment. Use when generating or reviewing code in a specific language. Triggers: /tech-guidance-stage, how do we write Python, Go conventions, our TypeScript patterns, language standards."
 allowed-tools:
-  - Bash(security *)
-  - Bash(secret-tool *)
   - Bash(curl *)
   - Bash(jq *)
   - Bash(source *)

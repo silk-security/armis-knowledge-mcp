@@ -22,15 +22,25 @@ import logging
 import os
 import sys
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import cast
 
 import anyio
 import httpx
+from dotenv import load_dotenv
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.server.stdio import stdio_server
 from mcp.shared.message import SessionMessage
 
 from auth import JWTAuth
+
+# Load $CLAUDE_PLUGIN_ROOT/.env (or, when unset, the bridge's own dir) before
+# resolving config. override=False means real shell env always wins — same
+# precedence as the shell-skills variant.
+_plugin_root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT") or Path(__file__).parent)
+_env_file = _plugin_root / ".env"
+if _env_file.is_file():
+    load_dotenv(_env_file, override=False)
 
 logger = logging.getLogger("knowledge-mcp-bridge")
 
@@ -68,14 +78,29 @@ def _resolve_config() -> tuple[str, str, str]:
     Returns (api_url, mcp_url, client_id). Missing required env vars raise
     RuntimeError with an actionable message rather than crashing later
     inside an async task group.
+
+    Credential precedence: ARMIS_KNOWLEDGE_CLIENT_{ID,SECRET} (knowledge-
+    specific override) > ARMIS_CLIENT_{ID,SECRET} (shared default also used
+    by armis-appsec). Only the shared names are documented; the prefixed
+    names exist so users with different credentials per service can override
+    without colliding.
     """
     api_url = os.environ.get("ARMIS_KNOWLEDGE_API_URL") or _DEFAULT_API_URL
     mcp_url = os.environ.get("ARMIS_KNOWLEDGE_MCP_URL") or _DEFAULT_MCP_URL
 
-    client_id = os.environ.get("ARMIS_CLIENT_ID", "")
+    client_id = (
+        os.environ.get("ARMIS_KNOWLEDGE_CLIENT_ID")
+        or os.environ.get("ARMIS_CLIENT_ID")
+        or ""
+    )
+    client_secret = (
+        os.environ.get("ARMIS_KNOWLEDGE_CLIENT_SECRET")
+        or os.environ.get("ARMIS_CLIENT_SECRET")
+        or ""
+    )
     if not client_id:
         raise RuntimeError("ARMIS_CLIENT_ID is not set in environment.")
-    if not os.environ.get("ARMIS_CLIENT_SECRET"):
+    if not client_secret:
         raise RuntimeError("ARMIS_CLIENT_SECRET is not set in environment.")
 
     return api_url, mcp_url, client_id
