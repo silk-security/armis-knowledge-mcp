@@ -6,6 +6,9 @@
         "ARMIS_KNOWLEDGE_API_URL": "${ARMIS_KNOWLEDGE_API_URL_DEV:-https://knowledge-api.moose-dev.armis.com}",
         "ARMIS_KNOWLEDGE_MCP_URL": "${ARMIS_KNOWLEDGE_MCP_URL_DEV:-https://knowledge-mcp.moose-dev.armis.com/mcp/}"
       }
+    },
+    "armis-code-mcp-dev": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/code-mcp.sh"
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "armis-knowledge-dev",
-  "description": "DEV environment (knowledge-mcp.moose-dev.armis.com). Adds /knowledge-dev, /ask-dev, /cwe-fix-dev, /framework-guidance-dev, and /tech-guidance-dev commands. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk.",
+  "description": "DEV environment (knowledge-mcp.moose-dev.armis.com). Adds /knowledge-dev, /ask-dev, /cwe-fix-dev, /framework-guidance-dev, and /tech-guidance-dev, and /threat-model-dev commands. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk. Also bundles a local code-intelligence MCP server (codebase-memory-mcp, downloaded on first use) that powers /threat-model-dev; it indexes repos into a local graph and makes no network calls to Armis infra.",
   "author": {
     "name": "Armis Security"
   },
