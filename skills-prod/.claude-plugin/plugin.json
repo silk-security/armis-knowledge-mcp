@@ -1,6 +1,6 @@
 {
   "name": "armis-knowledge-skills",
-  "description": "PROD environment (knowledge-api.moose.armis.com). Adds /knowledge, /cwe-fix, /framework-guidance, and /tech-guidance as shell skills that call the backend directly. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on demand. Tenant isolation enforced server-side; no knowledge data stored on disk.",
+  "description": "PROD environment (knowledge-api.moose.armis.com). Adds /knowledge, /cwe-fix, /cwe-fix-report, /framework-guidance, and /tech-guidance as shell skills that call the backend directly. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on demand. Tenant isolation enforced server-side; no knowledge data stored on disk.",
   "author": {
     "name": "Armis Security"
   },
