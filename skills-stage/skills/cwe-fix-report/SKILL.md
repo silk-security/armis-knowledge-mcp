@@ -23,6 +23,7 @@ Emit a structured markdown report summarizing a CWE-fix run — before/after fin
 
 - `--pr` (or "open a PR with these fixes") — also invoke the GitHub PR-create command at the end.
 - `--base <branch>` — the pre-fix baseline branch (default: `origin/main`).
+- `--diff` (or "just show me the diff") — emit a diff-only view: git diff summary + scanner before/after per file, without standards attribution, residuals, or notes. Useful for a quick paste-into-review or Slack. Compatible with `--pr` (the PR body is unaffected).
 - No arguments — generate the full report to stdout only.
 
 ## How to build the report
@@ -89,6 +90,13 @@ Bullet list. Behavior changes (e.g. "pickle → JSON"), env-var requirements, mi
 - PR body = Summary + Standards applied + Residual findings + Notes + Test plan checklist.
 - Run the GitHub CLI's PR-create command with a title like "fix(cwe): batch remediation — <N> findings closed" and the body written to a tempfile.
 - On failure, print the intended body and the CLI command for the user to run manually.
+
+### 6. If `--diff` was passed
+
+- Skip standards attribution, residuals, and notes.
+- Emit `git diff --stat <base>...HEAD` as the header.
+- For each changed file, print a two-column comparison: `Before:` (initial findings on the pre-fix version) → `After:` (findings on the current file). Same scanner both sides.
+- If `--diff` is combined with `--pr`, the diff-only view goes to stdout AND the normal PR body (Summary + Standards + Residuals + Notes) still goes to the PR — the flag controls stdout only.
 
 ## Notes
 

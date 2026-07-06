@@ -1,6 +1,6 @@
 # Using Armis Knowledge from your coding agent
 
-Once installed, the plugin gives your agent five slash commands and five
+Once installed, the plugin gives your agent six slash commands and six
 skills that wrap the same backend (the `/ask` skill is MCP-variant only).
 The slash command is what *you* type; the skill description is what your
 agent reads to decide when to call it on its own. This page is the operator's
@@ -18,6 +18,7 @@ colliding.
 |---|---|---|---|---|
 | `/knowledge` | `/knowledge-stage` | `/knowledge-dev` | Search org standards, list by scope | search / by-scope / get doc |
 | `/cwe-fix` | `/cwe-fix-stage` | `/cwe-fix-dev` | Org-specific remediation for a CWE | content-pack `cwes` |
+| `/cwe-fix-report` | `/cwe-fix-report-stage` | `/cwe-fix-report-dev` | Report a CWE-fix batch (before/after), optionally open a PR or emit a diff | local `git diff` + scanner + content-pack `cwes` |
 | `/framework-guidance` | `/framework-guidance-stage` | `/framework-guidance-dev` | Org guidance for a web framework | content-pack `frameworks` |
 | `/tech-guidance` | `/tech-guidance-stage` | `/tech-guidance-dev` | Org guidance for a language / runtime | content-pack `technologies` |
 | `/ask` (MCP only) | `/ask-stage` (MCP only) | `/ask-dev` (MCP only) | Free-form Q&A; agent loop returns prose | server-side ask agent |
@@ -38,6 +39,11 @@ the agent watches for. The intended firing pattern, by skill:
   fix CWE-89?", "is this a real CWE-79?"), or when the agent is triaging
   scanner findings. Surfaces both fix guidance and known false-positive
   patterns.
+- **cwe-fix-report** — fires *after* a batch of CWE fixes is done, when the
+  user says "report the fixes," "generate a diff summary," or "open a PR with
+  these fixes." Never mid-fix. Rescans the changed files, cites the org
+  standards each fix used, lists residuals, and either prints to stdout, runs
+  `gh pr create`, or emits a diff-only view.
 - **framework-guidance** — fires when the agent is generating or reviewing
   code that uses a known web framework (Django, Flask, FastAPI, Express,
   Rails, Spring, …). "How do we use Django here?" is the canonical phrasing.
@@ -80,6 +86,34 @@ Returns `{id, title, content_pack, path, body_text}`. The agent reads
 specific helper, library, or pattern. `404 not_found` means the org has no
 doc for that CWE; the agent should say so and fall back to general best
 practice.
+
+### `/cwe-fix-report` — report a CWE-fix batch, optionally open a PR
+
+```
+/cwe-fix-report                    # full stdout report
+/cwe-fix-report --pr               # also open a GitHub PR with the report as body
+/cwe-fix-report --diff             # diff-only view (git diff + before/after scanner)
+/cwe-fix-report --base develop     # override baseline (default: origin/main)
+```
+
+Runs *after* a fix batch — never mid-fix. The skill establishes a baseline
+(scan of the pre-fix state via git), rescans the current working tree,
+attributes each closed CWE to an org doc (or flags an industry-standard
+fallback for the knowledge admin), then emits the report. Sections: Summary,
+Fix table, Standards applied, Residual findings, Notes on the fix approach,
+Files in working tree.
+
+**Flags.** `--pr` additionally runs `gh pr create` with a condensed body
+(Summary + Standards + Residuals + Notes + test-plan checklist; the fix
+table stays in stdout). `--diff` emits a diff-only view — git diff summary
+plus a before/after scanner comparison per file, skipping attribution and
+notes. The two flags compose: `--pr --diff` puts the diff-only view on
+stdout but still opens the PR with the normal body.
+
+**Baseline.** Defaults to `origin/main`; override with `--base <branch>`.
+If git shows no commits ahead of the base, the skill falls back to unstaged
+changes and warns that the "initial findings" column was captured from the
+pre-edit working tree.
 
 ### `/framework-guidance <name>` — org guidance for a web framework
 
@@ -134,6 +168,14 @@ deciding whether the finding is actionable.
 
 ```
 /cwe-fix CWE-89
+```
+
+**Reporting a CWE-fix batch.** After a round of fixes, produce a structured
+before/after report — optionally open the PR in the same step.
+
+```
+/cwe-fix-report            # review locally first
+/cwe-fix-report --pr       # once you're happy, ship the PR
 ```
 
 **Starting work in a new framework.** Pull both the language and the
