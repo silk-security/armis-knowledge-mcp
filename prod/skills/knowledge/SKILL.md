@@ -16,7 +16,7 @@ Query the Armis Knowledge base in the **prod** environment (`knowledge-mcp.moose
 
 ## Priority
 
-When multiple standards are returned, apply them in priority order: **project > team > dept > org**. Briefly mention which standards you applied so the user can audit.
+The server returns standards already in priority order — apply them top-down. Briefly mention which standards you applied so the user can audit.
 
 ## Notes
 

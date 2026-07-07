@@ -18,7 +18,7 @@ colliding.
 |---|---|---|---|---|
 | `/knowledge` | `/knowledge-stage` | `/knowledge-dev` | Search org standards, list by scope | search / by-scope / get doc |
 | `/cwe-fix` | `/cwe-fix-stage` | `/cwe-fix-dev` | Org-specific remediation for a CWE | content-pack `cwes` |
-| `/cwe-fix-report` | `/cwe-fix-report-stage` | `/cwe-fix-report-dev` | Report a CWE-fix batch (before/after), optionally open a PR or emit a diff | local `git diff` + scanner + content-pack `cwes` |
+| `/cwe-fix-report` | `/cwe-fix-report-stage` | `/cwe-fix-report-dev` | Report a CWE-fix batch (before/after), optionally open a PR or emit a diff | local `git diff` + scanner → server assembles |
 | `/framework-guidance` | `/framework-guidance-stage` | `/framework-guidance-dev` | Org guidance for a web framework | content-pack `frameworks` |
 | `/tech-guidance` | `/tech-guidance-stage` | `/tech-guidance-dev` | Org guidance for a language / runtime | content-pack `technologies` |
 | `/ask` (MCP only) | `/ask-stage` (MCP only) | `/ask-dev` (MCP only) | Free-form Q&A; agent loop returns prose | server-side ask agent |
@@ -41,9 +41,9 @@ the agent watches for. The intended firing pattern, by skill:
   patterns.
 - **cwe-fix-report** — fires *after* a batch of CWE fixes is done, when the
   user says "report the fixes," "generate a diff summary," or "open a PR with
-  these fixes." Never mid-fix. Rescans the changed files, cites the org
-  standards each fix used, lists residuals, and either prints to stdout, runs
-  `gh pr create`, or emits a diff-only view.
+  these fixes." Never mid-fix. Collects the before/after scanner findings for
+  the changed files, sends them to the backend, and emits the report the
+  server returns — to stdout, as a `gh pr create` body, or as a diff-only view.
 - **framework-guidance** — fires when the agent is generating or reviewing
   code that uses a known web framework (Django, Flask, FastAPI, Express,
   Rails, Spring, …). "How do we use Django here?" is the canonical phrasing.
@@ -71,9 +71,9 @@ Search returns hits as `{id, title, scope, scope_ref, content_pack, path,
 snippet, score}`. The agent fetches the body of any hit it wants to apply.
 List returns the standards in that scope without a query.
 
-**Priority order** when multiple standards match: **project > team >
-department > organization**. The agent should briefly cite which scope each
-applied standard came from so you can audit.
+Results come back already ordered by priority — apply them top-down. The
+agent should briefly cite which scope each applied standard came from so you
+can audit.
 
 ### `/cwe-fix CWE-<n>` — org remediation for a weakness
 
@@ -96,23 +96,19 @@ practice.
 /cwe-fix-report --base develop     # override baseline (default: origin/main)
 ```
 
-Runs *after* a fix batch — never mid-fix. The skill establishes a baseline
-(scan of the pre-fix state via git), rescans the current working tree,
-attributes each closed CWE to an org doc (or flags an industry-standard
-fallback for the knowledge admin), then emits the report. Sections: Summary,
-Fix table, Standards applied, Residual findings, Notes on the fix approach,
-Files in working tree.
+Runs *after* a fix batch — never mid-fix. The skill collects the before/after
+scanner findings for the changed files (baselining the pre-fix state via git)
+and sends them to the backend, which assembles the finished report and returns
+it as markdown.
 
-**Flags.** `--pr` additionally runs `gh pr create` with a condensed body
-(Summary + Standards + Residuals + Notes + test-plan checklist; the fix
-table stays in stdout). `--diff` emits a diff-only view — git diff summary
-plus a before/after scanner comparison per file, skipping attribution and
-notes. The two flags compose: `--pr --diff` puts the diff-only view on
-stdout but still opens the PR with the normal body.
+**Flags.** `--pr` additionally runs `gh pr create` with the server's condensed
+PR body (the fix table stays in stdout). `--diff` emits the diff-only view. The
+two flags compose: `--pr --diff` puts the diff-only view on stdout but still
+opens the PR with the normal body.
 
 **Baseline.** Defaults to `origin/main`; override with `--base <branch>`.
 If git shows no commits ahead of the base, the skill falls back to unstaged
-changes and warns that the "initial findings" column was captured from the
+changes and warns that the "initial findings" were captured from the
 pre-edit working tree.
 
 ### `/framework-guidance <name>` — org guidance for a web framework
@@ -231,8 +227,8 @@ claude --debug "use the armis-knowledge tool to list standards in scope project"
 ## Where the data lives
 
 Nothing in this plugin contains knowledge data — the bundle ships only
-glue. The actual docs live server-side in S3 under per-tenant prefixes,
-and every call is authenticated with a short-lived JWT minted from your
-client credentials. Editing happens in the webapp at
+glue. The actual docs live server-side, isolated per tenant, and every call
+is authenticated with a short-lived JWT minted from your client credentials.
+Editing happens in the webapp at
 `knowledge.moose.armis.com` (or `knowledge.moose-stg.armis.com` /
 `knowledge.moose-dev.armis.com` for the non-prod backends).

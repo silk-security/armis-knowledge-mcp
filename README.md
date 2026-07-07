@@ -42,10 +42,9 @@ original MCP-vs-skill split.
 - MCP variant: `bridge.py` + `auth.py` + `run.sh` form a local stdio MCP
   server. The bridge exchanges client credentials for a short-lived JWT
   on startup and forwards every JSON-RPC message to the remote
-  streamable-HTTP MCP endpoint with a fresh bearer attached. Tenant
-  routing is resolved server-side from the global
-  `admin.client_credentials` table — the user only needs `client_id` /
-  `client_secret`, not a tenant identifier. Same auth lifecycle as
+  streamable-HTTP MCP endpoint with a fresh bearer attached. Your tenant
+  is resolved server-side — you only need `client_id` / `client_secret`,
+  not a tenant identifier. Same auth lifecycle as
   [armis-appsec-mcp](https://github.com/ArmisSecurity/armis-appsec-mcp).
 - Shell-skills variant: `lib/armis-knowledge.sh` does the same JWT
   exchange directly (`POST /api/v1/auth/token`), caches the token in
@@ -54,7 +53,7 @@ original MCP-vs-skill split.
   endpoint.
 
 This bundle contains **no knowledge data**. The data lives server-side
-(per-tenant, in S3) and is queried over HTTPS with the user's bearer token.
+and is queried over HTTPS with the user's bearer token.
 
 ## Layout
 
@@ -109,15 +108,9 @@ plugin name above. Stage and dev installs use suffixed slash commands
 (`/knowledge-stage`, `/knowledge-dev`) so they don't collide with a prod
 install on the same machine.
 
-Both URLs serve the same content — every push to `main` of this repo
-publishes to both. New installs should use the `ArmisSecurity` URL.
-
-> **Repo name vs marketplace name.** The marketplace is named
-> `armis-knowledge` (it now serves both MCP and shell-skills variants),
-> but the publish target repo is still `armis-knowledge-mcp` for
-> backwards-compat with existing customer installs. The mismatch is
-> intentional and harmless — `marketplace add <repo-url>` doesn't care
-> what the marketplace itself is named.
+Both URLs serve the same content. New installs should use the
+`ArmisSecurity` URL; the `silk-security` mirror is kept so existing installs
+keep updating.
 
 ### Credentials (both variants)
 
@@ -126,24 +119,15 @@ export ARMIS_CLIENT_ID='<your-id>'
 export ARMIS_CLIENT_SECRET='<your-secret>'
 ```
 
-The backend resolves your tenant from `client_id` server-side — there's
-no separate tenant identifier to set. The same env vars are used by
-`armis-appsec`, so a single export covers both.
+The backend resolves your tenant server-side — there's no separate tenant
+identifier to set. The same env vars are used by `armis-appsec`, so a single
+export covers both.
 
 ## Publishing
 
-`apps/mcp/plugin/` is mirrored to **two** public marketplace repos by
-[`.github/workflows/publish-plugin.yml`](../../../.github/workflows/publish-plugin.yml)
-on every push to `main` that touches the bundle. The matrix fans out so
-one target failing (token expired, org policy block) doesn't block the
-other. Each leg authenticates differently — ArmisSecurity org policy
-blocks classic PATs, so it uses a GitHub App; silk-security still uses
-a PAT. Both need `contents: write` on the publish target.
-
-| Target | Auth | Inputs | Notes |
-|---|---|---|---|
-| [`ArmisSecurity/armis-knowledge-mcp`](https://github.com/ArmisSecurity/armis-knowledge-mcp) | GitHub App | `vars.PLUGIN_PUSH_APP_CLIENT_ID` + `secrets.ARMIS_KNOWLEDGE_MCP_PUBLISHER` (App PEM private key) | Canonical home. App must be installed on the target repo. |
-| [`silk-security/armis-knowledge-mcp`](https://github.com/silk-security/armis-knowledge-mcp) | PAT | `secrets.PLUGIN_PUSH_TOKEN_SILK` | Legacy mirror; kept so existing installs keep updating. |
+Maintainers: `apps/mcp/plugin/` is published to the marketplace repo by a CI
+workflow in the source repository. See that repo's
+`.github/workflows/publish-plugin.yml` for the publish configuration.
 
 ## Local install (without publishing)
 

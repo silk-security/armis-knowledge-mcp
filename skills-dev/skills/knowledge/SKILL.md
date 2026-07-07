@@ -16,8 +16,8 @@ in the loop.
 ## Auth model
 
 - `ARMIS_CLIENT_ID` and `ARMIS_CLIENT_SECRET` are env vars (set in your
-  shell rc); the backend routes the token exchange to the right tenant by
-  looking the client_id up in the global `admin.client_credentials` table.
+  shell rc); the backend resolves your tenant from these credentials
+  server-side. You never pass a tenant.
 - The shared lib mints a fresh JWT on demand and caches it for ~55min in
   `$TMPDIR` with mode `600`. The user never copies a JWT.
 
@@ -60,8 +60,8 @@ ak_get /api/knowledge/by-scope \
 
 ## How to apply
 
-Apply standards in priority order: **project > team > department > organization**.
-Briefly cite which scope each applied standard came from so the user can audit.
+Results come back in priority order already — apply them top-down. Briefly
+cite which scope each applied standard came from so the user can audit.
 
 ## Errors
 
@@ -70,5 +70,3 @@ Briefly cite which scope each applied standard came from so the user can audit.
   `ARMIS_CLIENT_SECRET`.
 - `401 missing_bearer_token` — env vars not set. Tell the user to export
   `ARMIS_CLIENT_ID` and `ARMIS_CLIENT_SECRET`.
-- `401 invalid_client_credentials` — client_id has no admin routing row
-  (no tenant claims this credential), or secret didn't bcrypt-verify.
