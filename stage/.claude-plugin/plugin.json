@@ -1,6 +1,6 @@
 {
   "name": "armis-knowledge-stage",
-  "description": "STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge-stage, /ask-stage, /cwe-fix-stage, /cwe-fix-report-stage, /framework-guidance-stage, /tech-guidance-stage, and /threat-model-stage commands. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk. Also bundles a local code-intelligence MCP server (codebase-memory-mcp, downloaded on first use) that powers /threat-model-stage; it indexes repos into a local graph and makes no network calls to Armis infra.",
+  "description": "STAGE environment (knowledge-mcp.moose-stg.armis.com). Adds /knowledge-stage, /ask-stage, /cwe-fix-stage, /cwe-fix-report-stage, /framework-guidance-stage, and /tech-guidance-stage commands. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on startup (tenant routing resolved server-side). Tenant isolation enforced server-side; no knowledge data stored on disk.",
   "author": {
     "name": "Armis Security"
   },
