@@ -19,6 +19,7 @@ Emit a structured markdown report summarizing a CWE-fix run — before/after fin
 - `--base <branch>` — the pre-fix baseline branch (default: `origin/main`).
 - `--diff` (or "just show me the diff") — show the diff-only view instead of the full report. Compatible with `--pr`.
 - No arguments — print the full report to stdout only.
+- `--check-first` (or "check the code before running the report") — run `check_code` against each changed file BEFORE assembling the report. The results (violations flagged by the tenant's standards) are included in the report as a new "Pre-fix compliance check" section. Compatible with `--pr` and `--diff`. Requires the tenant to have machine-checkable standards (formal requirements or CWE / framework / technology guidance docs); a tenant with none returns an empty check section and continues with the normal report.
 
 ## How it works
 
@@ -53,6 +54,22 @@ assemble_cwe_fix_report(
 
 CWE ids may be `CWE-89` or bare `89`. It returns
 `{report_markdown, pr_body_markdown, diff_view_markdown, summary}`.
+
+
+### 2b. If `--check-first`: verify code against tenant standards
+
+Before emitting, for each file in the working tree, call the `check_code`
+MCP tool with the file's post-fix content and the file's language. The
+tool returns per-standard verdicts drawn from the tenant's own
+requirements and content-pack documents. Bucket the verdicts by verdict
+type (`violation`, `uncertain`, `compliant`, `not_applicable`) and hand
+them to the report as a "Pre-fix compliance check" section.
+
+If the tenant has no standards (`coverage.state = "empty"`) or nothing
+applies (`coverage.state = "no_applicable_content"`), skip the section
+quietly — the customer still gets the standard report.
+
+`--check-first` is compatible with `--pr` and `--diff`.
 
 ### 3. Emit
 
