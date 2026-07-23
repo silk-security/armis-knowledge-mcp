@@ -51,6 +51,18 @@ the agent watches for. The intended firing pattern, by skill:
   TypeScript, Java, Rust, Node, Ruby, …).
 - **ask** (MCP only) — fires on Q&A phrasing: "ask the knowledge base about
   X", "summarize what we have on Y". Returns synthesized prose with citations.
+- **check_code** (agent-invoked; no slash command) — the agent calls this on
+  its own when it wants to verify code against your tenant's standards. Fires
+  on phrases like "check this code," "does this follow our standards,"
+  "verify my diff." Returns per-standard verdicts (`violation`, `compliant`,
+  `not_applicable`, or `uncertain`) with citations back to the source
+  standard. See [check_code section below](#check_code--verify-code-against-your-standards)
+  for details.
+- **export_findings_report** (agent-invoked; no slash command) — the agent
+  calls this when you ask for a report artifact — "give me a SARIF file,"
+  "output as CSV," "human-readable summary." Turns any findings list (from
+  `check_code`, the Armis AppSec scanner, or a mix) into a downloadable
+  JSON / CSV / SARIF / Markdown report.
 
 If the agent isn't reaching for a skill you expected, type the slash command
 explicitly — that always fires.
@@ -150,6 +162,113 @@ Server-side agent loop. Returns synthesized prose plus the search/lookup
 calls it ran (cite these so the user can audit). Not in the shell-skills
 variant — the agent loop runs on the MCP server.
 
+### `check_code` — verify code against your standards
+
+Agent-invoked; no slash command. The agent calls it on its own when you
+ask it to check code — "does this follow our standards," "check my
+diff," "verify this snippet against our policies." Available in the MCP
+variant only.
+
+Input:
+
+```
+check_code(
+  code:          str,   # required — the source snippet to verify
+  language:      str,   # optional — python / typescript / go / any / …
+  standard_ids:  list,  # optional — scope to specific requirements or docs
+)
+```
+
+Returns per-standard verdicts:
+
+```
+{
+  "checked": [
+    {
+      "source":       "requirement" | "document",   // tier 1 vs tier 2
+      "confidence":   "high" | "medium" | "low",
+      "standard_id":  "ARM-DATA-PATH-001",
+      "verdict":      "violation" | "compliant" | "not_applicable" | "uncertain",
+      "line_hint":    12,
+      "evidence":     "…",
+      "recommended_fix": "…",
+      "citation":     "cwes/remediation/CWE-22.md"
+    }
+  ],
+  "coverage": { "state": "empty" | "checked" | "no_applicable_content", … },
+  "elapsed_ms": 8340
+}
+```
+
+Two paths behind one interface. **Tier 1** (requirement-backed) uses
+your tenant's machine-checkable requirements with structured
+`bad_example` / `good_example` anchors — high confidence. **Tier 2**
+(document-backed) reads your raw content-pack documents when no formal
+requirement applies — medium confidence, honest hedging via the
+`uncertain` verdict.
+
+Coverage states signal what actually ran:
+
+| state | meaning |
+|---|---|
+| `empty` | Tenant has no standards yet — configure some to enable checks. |
+| `no_applicable_content` | You have standards, but none apply to this code's language / context. |
+| `checked` | The pipeline ran; `checked[]` populated. |
+
+Nothing is persisted; check_code is read-only. Verdicts are best-effort;
+`uncertain` means the model can't decide confidently — treat those as
+concerns to review, not judgments.
+
+### `export_findings_report` — format findings as JSON / CSV / SARIF / Markdown
+
+Agent-invoked; no slash command. The agent calls it when you ask for a
+report artifact — "give me a SARIF file," "export as CSV," "human
+summary." Available in the MCP variant only.
+
+Input:
+
+```
+export_findings_report(
+  findings:      list,     # required — from check_code, AppSec, or a mix
+  format:        str,      # "json" | "csv" | "sarif" | "human"; default "human"
+  title:         str,      # optional — appears in the report header
+  run_label:     str,      # optional — commit SHA, PR number, work item id
+  base_ref:      str,      # optional — git ref the findings were computed against
+  include_body:  bool,     # default true; false = summary counts only
+)
+```
+
+Returns:
+
+```
+{
+  "report":            "<serialized string>",
+  "suggested_filename": "armis-findings-2026-07-21T15-04-11Z.sarif",
+  "mime_type":         "application/sarif+json",
+  "byte_count":        8421,
+  "summary":           { "total": 12, "by_verdict": {…}, "by_severity": {…}, "by_source": {…} }
+}
+```
+
+Format guide:
+
+| format | Best for |
+|---|---|
+| `json` | Scripting, jq pipelines, custom internal tooling. Full-fidelity envelope. |
+| `csv` | Spreadsheet review, ticket-import (Jira / ServiceNow), audit deliverables. UTF-8 BOM so Excel opens cleanly. |
+| `sarif` | GitHub / GitLab code-scanning, VS Code SARIF viewer, SAST aggregators. Conforms to SARIF 2.1.0. Uploadable via `github/codeql-action/upload-sarif`. |
+| `human` | Terminal viewing, chat responses, weekly reports. Markdown with severity sigils and citation links. |
+
+The tool does NOT write files, does NOT open PRs, and does NOT persist
+the report server-side. The caller (typically the agent) writes the
+returned `report` string wherever you want it — a local file, a PR
+comment, a chat message, an artifact upload.
+
+Accepts findings from either Knowledge `check_code` shape or Armis
+AppSec scanner shape (or a mix); the formatter normalizes internally.
+Findings with `has_secret: true` have their evidence redacted before
+the report body is generated.
+
 ## Recipes
 
 **Pre-flight before writing security-sensitive code.** Pull project-scope
@@ -189,6 +308,34 @@ over enabled docs.
 /knowledge password rotation
 /knowledge retention for audit logs
 ```
+
+**End-to-end: build → scan → remediate → report.** The agent orchestrates
+all four steps in a single chat. Type a natural-language request:
+
+```
+Build a FastAPI endpoint for payments following our standards.
+Then scan it, remediate any findings using our knowledge base,
+and give me a SARIF report I can upload to GitHub code-scanning.
+```
+
+The agent walks these tools in order, on its own:
+
+1. `list_standards`, `get_framework_guidance`, `search_knowledge` — pulls
+   your team's applicable standards
+2. Writes the code following those standards, citing which doc drove each
+   decision
+3. Calls the Armis AppSec scanner tool to find CWE-level issues in what it
+   just wrote
+4. For each finding: calls `get_cwe_remediation` — applies your tenant's
+   pattern if one exists, falls back to AppSec's default otherwise
+5. Optionally re-runs `check_code` on the fixed code to verify it now
+   passes your machine-checkable requirements
+6. Calls `export_findings_report` with `format="sarif"` — hands you back
+   the file to save or upload
+
+Swap `format="sarif"` for `csv` (for compliance officers), `json` (for
+scripting), or `human` (for a chat-native summary) based on what you'll
+do with the report next.
 
 ## Verifying it's working
 
