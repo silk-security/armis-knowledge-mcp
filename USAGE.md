@@ -58,11 +58,22 @@ the agent watches for. The intended firing pattern, by skill:
   `not_applicable`, or `uncertain`) with citations back to the source
   standard. See [check_code section below](#check_code--verify-code-against-your-standards)
   for details.
+- **check_knowledge_coverage** (agent-invoked; no slash command) — the
+  agent calls this after a scan produces CWE findings and before applying
+  fixes. Given the list of unique CWEs from the scan, returns per-CWE
+  coverage: which CWEs your tenant has Knowledge docs for and which will
+  fall back to industry-standard fix guidance. The agent emits a one-line
+  coverage summary to you before touching code (*"7/9 CWEs covered by
+  Knowledge; falling back to industry-standard fixes for CWE-434, CWE-918"*)
+  and passes the coverage report to `export_findings_report` so the
+  artifact carries the same breakdown.
 - **export_findings_report** (agent-invoked; no slash command) — the agent
   calls this when you ask for a report artifact — "give me a SARIF file,"
   "output as CSV," "human-readable summary." Turns any findings list (from
   `check_code`, the Armis AppSec scanner, or a mix) into a downloadable
-  JSON / CSV / SARIF / Markdown report.
+  JSON / CSV / SARIF / Markdown report. Accepts an optional
+  `knowledge_coverage` field from `check_knowledge_coverage` and surfaces
+  it in every format.
 
 If the agent isn't reaching for a skill you expected, type the slash command
 explicitly — that always fires.
@@ -219,6 +230,46 @@ Nothing is persisted; check_code is read-only. Verdicts are best-effort;
 `uncertain` means the model can't decide confidently — treat those as
 concerns to review, not judgments.
 
+### `check_knowledge_coverage` — which CWEs does your Knowledge cover?
+
+Agent-invoked; no slash command. The agent calls it after a scan produces
+CWE findings and before applying fixes. Answers a question no other tool
+does: *"which of these CWEs does my tenant have authoritative Knowledge
+for, and which will fall back to industry-standard fixes?"*
+
+Input:
+
+```
+check_knowledge_coverage(
+  cwes:  list[str],   # required — CWE ids (CWE-89, cwe_89, 89 all work)
+  pack:  str,         # optional — content pack; default "cwes/remediation"
+)
+```
+
+Returns:
+
+```
+{
+  "checked": [
+    {"cwe": "CWE-89",  "covered": true,  "doc_path": "cwes/remediation/CWE-89.md"},
+    {"cwe": "CWE-434", "covered": false, "doc_path": null}
+  ],
+  "covered":     ["CWE-89", "CWE-22"],
+  "not_covered": ["CWE-434", "CWE-918"],
+  "summary":     {"total": 4, "covered": 2, "not_covered": 2}
+}
+```
+
+**Why it matters.** Before this tool, you had no deterministic way to
+know which of a scan's CWEs your Knowledge would drive vs which the
+agent would silently fall back on. Now the agent tells you up front, and
+the coverage picture also becomes an authoring priority signal — CWEs
+that appear in real scan findings but aren't in Knowledge yet are the
+highest-value docs to add next.
+
+Duplicates and non-canonical forms are normalized silently. Unparseable
+inputs are dropped. Max 200 CWEs per call.
+
 ### `export_findings_report` — format findings as JSON / CSV / SARIF / Markdown
 
 Agent-invoked; no slash command. The agent calls it when you ask for a
@@ -229,12 +280,14 @@ Input:
 
 ```
 export_findings_report(
-  findings:      list,     # required — from check_code, AppSec, or a mix
-  format:        str,      # "json" | "csv" | "sarif" | "human"; default "human"
-  title:         str,      # optional — appears in the report header
-  run_label:     str,      # optional — commit SHA, PR number, work item id
-  base_ref:      str,      # optional — git ref the findings were computed against
-  include_body:  bool,     # default true; false = summary counts only
+  findings:            list,   # required — from check_code, AppSec, or a mix
+  format:              str,    # "json" | "csv" | "sarif" | "human"; default "human"
+  title:               str,    # optional — appears in the report header
+  run_label:           str,    # optional — commit SHA, PR number, work item id
+  base_ref:            str,    # optional — git ref the findings were computed against
+  include_body:        bool,   # default true; false = summary counts only
+  knowledge_coverage:  dict,   # optional — pass the check_knowledge_coverage
+                               # response verbatim; surfaces in every format
 )
 ```
 
@@ -326,12 +379,18 @@ The agent walks these tools in order, on its own:
    decision
 3. Calls the Armis AppSec scanner tool to find CWE-level issues in what it
    just wrote
-4. For each finding: calls `get_cwe_remediation` — applies your tenant's
-   pattern if one exists, falls back to AppSec's default otherwise
-5. Optionally re-runs `check_code` on the fixed code to verify it now
+4. Calls `check_knowledge_coverage` with the unique CWEs from the scan
+   — batch check for which CWEs your tenant has Knowledge for. The
+   agent emits a one-line coverage summary to you before touching code:
+   *"Coverage: 7/9 CWEs covered by Knowledge. Falling back to
+   industry-standard fixes for CWE-434 and CWE-918."*
+5. For each finding: calls `get_cwe_remediation` — applies your tenant's
+   pattern for covered CWEs, falls back to AppSec's default otherwise
+6. Optionally re-runs `check_code` on the fixed code to verify it now
    passes your machine-checkable requirements
-6. Calls `export_findings_report` with `format="sarif"` — hands you back
-   the file to save or upload
+7. Calls `export_findings_report` with `format="sarif"` and the coverage
+   report from step 4 — hands you back the file to save or upload,
+   with the coverage breakdown surfaced in the report
 
 Swap `format="sarif"` for `csv` (for compliance officers), `json` (for
 scripting), or `human` (for a chat-native summary) based on what you'll
