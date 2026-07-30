@@ -1,6 +1,6 @@
 {
   "name": "armis-knowledge-skills-stage",
-  "description": "STAGE environment (knowledge-api.moose-stg.armis.com). Adds /knowledge-stage, /cwe-fix-stage, /cwe-fix-report-stage, /remediate-with-knowledge-stage, /framework-guidance-stage, and /tech-guidance-stage as shell skills that call the backend directly. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on demand. Tenant isolation enforced server-side; no knowledge data stored on disk.",
+  "description": "STAGE environment (knowledge-api.moose-stg.armis.com). Adds /knowledge-stage, /cwe-fix-stage, /cwe-fix-report-stage, /remediate-with-knowledge-stage, /code-review-with-knowledge-stage, /framework-guidance-stage, and /tech-guidance-stage as shell skills that call the backend directly. Reads ARMIS_CLIENT_ID and ARMIS_CLIENT_SECRET; exchanges them for a short-lived JWT on demand. Tenant isolation enforced server-side; no knowledge data stored on disk.",
   "author": {
     "name": "Armis Security"
   },
